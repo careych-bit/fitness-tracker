@@ -1,6 +1,8 @@
-# fitness-tracker
+# Fitness Tracker
 
-This template should help get you started developing with Vue 3 in Vite.
+CIS 371 term project.
+
+A Vue and Firebase web application for creating workouts, recording exercise activity, tracking fitness goals, and viewing workout progress.
 
 ## Recommended IDE Setup
 
