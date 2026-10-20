@@ -1,6 +1,105 @@
+<script setup lang="ts">
+interface Workout {
+  Workout_ID: string;
+  User_ID: string;
+  Workout_name: string;
+  Date: string; // Consider using Date type if needed
+  Start_Time: string; // Consider using Date type if needed
+  Duration: number; // Duration in minutes or seconds
+  Completion: boolean;
+  Notes?: string; // Optional field
+}
+
+import { ref } from 'vue';
+const workoutName = ref("");
+const scheduledDate = ref("");
+const startTime = ref("");
+const duration = ref(0);
+const completion = ref(false);
+const notes = ref("");
+
+
+// TODO 3 (Create Workout):
+// Implement addWorkout().
+// - Validate required fields
+// - Create a new workout object
+// - Associate it with the current user
+// - Add it to the workout list
+// - Clear the form after submission
+
+// TODO 4 (Read Workouts):
+// Implement functionality to retrieve workouts.
+// - Load workouts belonging to the current user
+// - Display workouts in the workout list
+
+// TODO 5 (Edit Workout):
+// Allow users to edit existing workouts.
+// - Select a workout
+// - Populate the form with its current values
+// - Save updated information
+
+// TODO 6 (Delete Workout):
+// Implement deleteWorkout().
+// - Select a workout to delete
+// - Ask for confirmation
+// - Remove it if confirmed
+
+// TODO 7 (Workout Completion):
+// Allow users to mark workouts as completed.
+// - Update the Completion field
+// - Reflect changes in the interface
+
+// TODO 8 (Firestore Integration):
+// Connect workout CRUD operations to Firestore.
+// - Create workout documents
+// - Read workout documents
+// - Update workout documents
+// - Delete workout documents
+// - Use Firestore-generated document IDs
+
+// TODO 9 (User Authentication):
+// Use Firebase Authentication to identify the user.
+// - Associate workouts with the user's UID
+// - Only query workouts owned by that user
+// - Enforce ownership using Firestore security rules
+// - Test with two different accounts
+
+// TODO 10 (Loading and Error Handling):
+// - Track loading states during database operations
+// - Handle failed operations
+// - Display helpful error messages
+</script>
+
 <template>
   <main>
     <h1>Workouts</h1>
-    <p>Your workouts will eventually appear here.</p>
+
+    <!-- TODO 11 (Workout Form):
+        Create inputs for:
+        - Workout name
+        - Date
+        - Start time
+        - Duration
+        - Completion status
+        - Notes
+
+        Use v-model to bind the inputs.
+        Handle form submission.
+    -->
+
+    <!-- TODO 12 (Workout List):
+        Display the current user's workouts.
+        - Use v-for
+        - Display workout details
+        - Include Edit and Delete buttons
+        - Allow completion status changes
+    -->
+
+    <!-- TODO 13 (Conditional Rendering):
+        - Display a message if no workouts exist
+        - Show loading feedback
+        - Show errors when operations fail
+    -->
   </main>
 </template>
+
