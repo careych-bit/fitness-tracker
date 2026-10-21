@@ -18,6 +18,23 @@ const duration = ref(0);
 const completion = ref(false);
 const notes = ref("");
 
+function addWorkout() {
+  if (!workoutName.value || !scheduledDate.value || !startTime.value || duration.value <= 0) {
+    console.error("Please fill in all required fields.");
+    return;
+  }
+
+  const newWorkout: Workout = {
+    Workout_ID: generateUniqueId(), // Implement a function to generate unique IDs
+    User_ID: getCurrentUserId(), // Implement a function to get the current user's ID
+    Workout_name: workoutName.value,
+    Date: scheduledDate.value,
+    Start_Time: startTime.value,
+    Duration: duration.value,
+    Completion: completion.value,
+    Notes: notes.value || undefined
+  };
+}
 
 // TODO 3 (Create Workout):
 // Implement addWorkout().
