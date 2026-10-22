@@ -41,5 +41,6 @@ function login() {
 
     <button @click="login">Login</button>
     <p>Don't have an account? <router-link to="/register">Register here</router-link>.</p>
+    <p> workouts page <router-link to="/workouts">Workouts</router-link>.</p>
   </div>
 </template>

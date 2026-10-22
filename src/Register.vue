@@ -42,5 +42,6 @@ function register() {
     <button @click="register">Register</button>
     <p>After registering, please check your email for a verification link before logging in.</p>
     <p>Already have an account? <router-link to="/login">Login here</router-link>.</p>
+
   </div>
 </template>

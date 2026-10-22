@@ -17,44 +17,108 @@ const startTime = ref("");
 const duration = ref(0);
 const completion = ref(false);
 const notes = ref("");
+const workouts = ref<Workout[]>([]);
+const editingWorkoutId = ref<string | null>(null);
 
 function addWorkout() {
-  if (!workoutName.value || !scheduledDate.value || !startTime.value || duration.value <= 0) {
-    console.error("Please fill in all required fields.");
+  if (workoutName.value.trim() === "") {
+  alert("Please enter a workout name.");
+  return;
+}
+if (workoutName.value.length > 50) {
+  alert("Workout name must be 50 characters or fewer.");
+  return;
+}
+  if (scheduledDate.value.trim() === "") {
+    alert("Please select a date.");
     return;
   }
-
+  if (startTime.value.trim() === "") {
+    alert("Please select a start time.");
+    return;
+  }
+  if (duration.value <= 0) {
+    alert("Please enter a valid duration.");
+    return;
+  }
   const newWorkout: Workout = {
-    Workout_ID: generateUniqueId(), // Implement a function to generate unique IDs
-    User_ID: getCurrentUserId(), // Implement a function to get the current user's ID
+    Workout_ID: "temporary-id", // This should be generated uniquely
+    User_ID: "temporary-user",
     Workout_name: workoutName.value,
     Date: scheduledDate.value,
     Start_Time: startTime.value,
     Duration: duration.value,
     Completion: completion.value,
-    Notes: notes.value || undefined
+    Notes: notes.value
   };
+  workouts.value.push(newWorkout);
+
+  workoutName.value = "";
+  scheduledDate.value = "";
+  startTime.value = "";
+  duration.value = 0;
+  completion.value = false;
+  notes.value = "";
 }
 
-// TODO 3 (Create Workout):
-// Implement addWorkout().
-// - Validate required fields
-// - Create a new workout object
-// - Associate it with the current user
-// - Add it to the workout list
-// - Clear the form after submission
+
 
 // TODO 4 (Read Workouts):
 // Implement functionality to retrieve workouts.
 // - Load workouts belonging to the current user
 // - Display workouts in the workout list
 
+
+function editWorkout(workout: Workout) {
+  editingWorkoutId.value = workout.Workout_ID;
+  workoutName.value = workout.Workout_name;
+  scheduledDate.value = workout.Date;
+  startTime.value = workout.Start_Time;
+  duration.value = workout.Duration;
+  completion.value = workout.Completion;
+  notes.value = workout.Notes || "";
+}
 // TODO 5 (Edit Workout):
 // Allow users to edit existing workouts.
 // - Select a workout
 // - Populate the form with its current values
 // - Save updated information
 
+function updateWorkout() {
+  if (editingWorkoutId.value) {
+    const workoutIndex = workouts.value.findIndex(
+      (w) => w.Workout_ID === editingWorkoutId.value
+    );
+    if (workoutIndex !== -1) {
+      workouts.value[workoutIndex] = {
+        Workout_ID: editingWorkoutId.value,
+        User_ID: "temporary-user", // This should be the actual user ID
+        Workout_name: workoutName.value,
+        Date: scheduledDate.value,
+        Start_Time: startTime.value,
+        Duration: duration.value,
+        Completion: completion.value,
+        Notes: notes.value
+      };
+      editingWorkoutId.value = null;
+      workoutName.value = "";
+      scheduledDate.value = "";
+      startTime.value = "";
+      duration.value = 0;
+      completion.value = false;
+      notes.value = "";
+    }
+  }
+}
+
+function deleteWorkout(workoutId: string) {
+  const confirmed = confirm("Are you sure you want to delete this workout?");
+  if (confirmed) {
+    workouts.value = workouts.value.filter(
+      (workout) => workout.Workout_ID !== workoutId
+    );
+  }
+}
 // TODO 6 (Delete Workout):
 // Implement deleteWorkout().
 // - Select a workout to delete
@@ -91,32 +155,76 @@ function addWorkout() {
   <main>
     <h1>Workouts</h1>
 
-    <!-- TODO 11 (Workout Form):
-        Create inputs for:
-        - Workout name
-        - Date
-        - Start time
-        - Duration
-        - Completion status
-        - Notes
+    <form @submit.prevent="editingWorkoutId ? updateWorkout() : addWorkout()">
 
-        Use v-model to bind the inputs.
-        Handle form submission.
-    -->
+      <label for="workoutName">Workout Name:</label>
+      <input
+        id="workoutName"
+        v-model="workoutName"
+        type="text"
+        required
+        maxlength="50"
+      />
 
-    <!-- TODO 12 (Workout List):
-        Display the current user's workouts.
-        - Use v-for
-        - Display workout details
-        - Include Edit and Delete buttons
-        - Allow completion status changes
-    -->
+      <label for="scheduledDate">Date:</label>
+      <input
+        id="scheduledDate"
+        v-model="scheduledDate"
+        type="date"
+        required
+      />
 
-    <!-- TODO 13 (Conditional Rendering):
-        - Display a message if no workouts exist
-        - Show loading feedback
-        - Show errors when operations fail
-    -->
+      <label for="startTime">Start Time:</label>
+      <input
+        id="startTime"
+        v-model="startTime"
+        type="time"
+        required
+      />
+
+      <label for="duration">Duration (minutes):</label>
+      <input
+        id="duration"
+        v-model.number="duration"
+        type="number"
+        min="1"
+        max="180"
+        required
+      />
+
+      <label for="completion">Completed:</label>
+      <input
+        id="completion"
+        v-model="completion"
+        type="checkbox"
+      />
+
+      <label for="notes">Notes:</label>
+      <textarea
+        id="notes"
+        v-model="notes"
+        maxlength="200"
+      ></textarea>
+
+      // Submit button for adding OR editing
+      <button type="submit">
+        {{ editingWorkoutId ? 'Save Changes' : 'Add Workout' }}
+      </button>
+
+    </form>
+
+    // Display existing workouts
+    <div v-for="workout in workouts" :key="workout.Workout_ID">
+      <h3>{{ workout.Workout_name }}</h3>
+      <p>Date: {{ workout.Date }}</p>
+      <p>Start Time: {{ workout.Start_Time }}</p>
+      <p>Duration: {{ workout.Duration }} minutes</p>
+      <p>Completed: {{ workout.Completion ? 'Yes' : 'No' }}</p>
+      <p>Notes: {{ workout.Notes }}</p>
+
+      <button type="button" @click="editWorkout(workout)">Edit</button>
+      <button type="button" @click="deleteWorkout(workout.Workout_ID)">Delete</button>
+    </div>
+
   </main>
 </template>
-
