@@ -1,4 +1,26 @@
 <script setup lang="ts">
+
+import { ref } from "vue";
+
+import {
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  where
+} from "firebase/firestore";
+
+  import {
+  getAuth,
+  onAuthStateChanged,
+  type User
+} from "firebase/auth";
+
+import { db } from "@/firebase";
+  
 interface Workout {
   Workout_ID: string;
   User_ID: string;
@@ -10,7 +32,6 @@ interface Workout {
   Notes?: string; // Optional field
 }
 
-import { ref } from 'vue';
 const workoutName = ref("");
 const scheduledDate = ref("");
 const startTime = ref("");
@@ -20,55 +41,118 @@ const notes = ref("");
 const workouts = ref<Workout[]>([]);
 const editingWorkoutId = ref<string | null>(null);
 
-function addWorkout() {
+
+const auth = getAuth();
+
+const currentUser = ref<User | null>(null);
+
+onAuthStateChanged(auth, (user) => {
+  currentUser.value = user;
+
+  if (user) {
+    loadWorkouts();
+  } else {
+    workouts.value = [];
+  }
+});
+  
+async function loadWorkouts() {
+
+  if (!currentUser.value) {
+    return;
+  }
+
+  workouts.value = [];
+
+  const q = query(
+    collection(db, "workouts"),
+    where("User_ID", "==", currentUser.value.uid)
+  );
+
+  const qs = await getDocs(q);
+
+  qs.forEach((qd) => {
+    const workoutData = qd.data();
+
+    workouts.value.push({
+      Workout_ID: qd.id,
+      User_ID: workoutData.User_ID,
+      Workout_name: workoutData.Workout_name,
+      Date: workoutData.Date,
+      Start_Time: workoutData.Start_Time,
+      Duration: workoutData.Duration,
+      Completion: workoutData.Completion,
+      Notes: workoutData.Notes
+    });
+  });
+}
+  
+function validateWorkout(): boolean {
+
   if (workoutName.value.trim() === "") {
-  alert("Please enter a workout name.");
-  return;
-}
-if (workoutName.value.length > 50) {
-  alert("Workout name must be 50 characters or fewer.");
-  return;
-}
+    alert("Please enter a workout name.");
+    return false;
+  }
+
+  if (workoutName.value.length > 50) {
+    alert("Workout name must be 50 characters or fewer.");
+    return false;
+  }
+
   if (scheduledDate.value.trim() === "") {
     alert("Please select a date.");
-    return;
+    return false;
   }
+
   if (startTime.value.trim() === "") {
     alert("Please select a start time.");
-    return;
+    return false;
   }
+
   if (duration.value <= 0) {
     alert("Please enter a valid duration.");
+    return false;
+  }
+
+  return true;
+}
+async function addWorkout() {
+   if (!validateWorkout()) {
     return;
   }
-  const newWorkout: Workout = {
-    Workout_ID: "temporary-id", // This should be generated uniquely
-    User_ID: "temporary-user",
-    Workout_name: workoutName.value,
-    Date: scheduledDate.value,
-    Start_Time: startTime.value,
-    Duration: duration.value,
-    Completion: completion.value,
-    Notes: notes.value
-  };
-  workouts.value.push(newWorkout);
+  if (!currentUser.value) {
+    alert("Please sign in.");
+    return;
+  }
 
-  workoutName.value = "";
-  scheduledDate.value = "";
-  startTime.value = "";
-  duration.value = 0;
-  completion.value = false;
-  notes.value = "";
+  try {
+    await addDoc(
+      collection(db, "workouts"),
+      {
+        User_ID: currentUser.value.uid,
+        Workout_name: workoutName.value,
+        Date: scheduledDate.value,
+        Start_Time: startTime.value,
+        Duration: duration.value,
+        Completion: completion.value,
+        Notes: notes.value
+      }
+    );
+
+    workoutName.value = "";
+    scheduledDate.value = "";
+    startTime.value = "";
+    duration.value = 0;
+    completion.value = false;
+    notes.value = "";
+
+    await loadWorkouts();
+
+  } catch (error) {
+    console.error(error);
+  }
 }
-
-
-
-// TODO 4 (Read Workouts):
-// Implement functionality to retrieve workouts.
-// - Load workouts belonging to the current user
-// - Display workouts in the workout list
-
-
+  
 function editWorkout(workout: Workout) {
   editingWorkoutId.value = workout.Workout_ID;
   workoutName.value = workout.Workout_name;
@@ -78,77 +162,69 @@ function editWorkout(workout: Workout) {
   completion.value = workout.Completion;
   notes.value = workout.Notes || "";
 }
-// TODO 5 (Edit Workout):
-// Allow users to edit existing workouts.
-// - Select a workout
-// - Populate the form with its current values
-// - Save updated information
 
-function updateWorkout() {
-  if (editingWorkoutId.value) {
-    const workoutIndex = workouts.value.findIndex(
-      (w) => w.Workout_ID === editingWorkoutId.value
-    );
-    if (workoutIndex !== -1) {
-      workouts.value[workoutIndex] = {
-        Workout_ID: editingWorkoutId.value,
-        User_ID: "temporary-user", // This should be the actual user ID
+async function updateWorkout() {
+
+  if (!validateWorkout()) {
+    return;
+  }
+
+  if (!editingWorkoutId.value) {
+    return;
+  }
+
+  try {
+
+    await updateDoc(
+      doc(db, "workouts", editingWorkoutId.value),
+      {
         Workout_name: workoutName.value,
         Date: scheduledDate.value,
         Start_Time: startTime.value,
         Duration: duration.value,
         Completion: completion.value,
         Notes: notes.value
-      };
-      editingWorkoutId.value = null;
-      workoutName.value = "";
-      scheduledDate.value = "";
-      startTime.value = "";
-      duration.value = 0;
-      completion.value = false;
-      notes.value = "";
-    }
-  }
-}
-
-function deleteWorkout(workoutId: string) {
-  const confirmed = confirm("Are you sure you want to delete this workout?");
-  if (confirmed) {
-    workouts.value = workouts.value.filter(
-      (workout) => workout.Workout_ID !== workoutId
+      }
     );
+
+    editingWorkoutId.value = null;
+
+    workoutName.value = "";
+    scheduledDate.value = "";
+    startTime.value = "";
+    duration.value = 0;
+    completion.value = false;
+    notes.value = "";
+
+    await loadWorkouts();
+
+  } catch (error) {
+    console.error(error);
   }
 }
-// TODO 6 (Delete Workout):
-// Implement deleteWorkout().
-// - Select a workout to delete
-// - Ask for confirmation
-// - Remove it if confirmed
 
-// TODO 7 (Workout Completion):
-// Allow users to mark workouts as completed.
-// - Update the Completion field
-// - Reflect changes in the interface
+async function deleteWorkout(workoutId: string) {
 
-// TODO 8 (Firestore Integration):
-// Connect workout CRUD operations to Firestore.
-// - Create workout documents
-// - Read workout documents
-// - Update workout documents
-// - Delete workout documents
-// - Use Firestore-generated document IDs
+  const confirmed = confirm(
+    "Are you sure you want to delete this workout?"
+  );
 
-// TODO 9 (User Authentication):
-// Use Firebase Authentication to identify the user.
-// - Associate workouts with the user's UID
-// - Only query workouts owned by that user
-// - Enforce ownership using Firestore security rules
-// - Test with two different accounts
+  if (!confirmed) {
+    return;
+  }
 
-// TODO 10 (Loading and Error Handling):
-// - Track loading states during database operations
-// - Handle failed operations
-// - Display helpful error messages
+  try {
+
+    await deleteDoc(
+      doc(db, "workouts", workoutId)
+    );
+
+    await loadWorkouts();
+
+  } catch (error) {
+    console.error(error);
+  }
+}
 </script>
 
 <template>
@@ -206,14 +282,13 @@ function deleteWorkout(workoutId: string) {
         maxlength="200"
       ></textarea>
 
-      // Submit button for adding OR editing
+      
       <button type="submit">
         {{ editingWorkoutId ? 'Save Changes' : 'Add Workout' }}
       </button>
 
     </form>
 
-    // Display existing workouts
     <div v-for="workout in workouts" :key="workout.Workout_ID">
       <h3>{{ workout.Workout_name }}</h3>
       <p>Date: {{ workout.Date }}</p>
