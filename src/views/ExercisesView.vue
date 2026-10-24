@@ -181,3 +181,83 @@ const filteredExercises = computed(() => {
     </section>
   </main>
 </template>
+
+<style scoped>
+.exercise-library {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  margin-bottom: 0.5rem;
+}
+
+.exercise-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.exercise-filters input,
+.exercise-filters select {
+  padding: 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.exercise-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.exercise-card {
+  padding: 1.25rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.exercise-card h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.exercise-category {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.no-results {
+  margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+  .exercise-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .exercise-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>
