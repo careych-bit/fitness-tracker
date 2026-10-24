@@ -164,7 +164,9 @@ const filteredExercises = computed(() => {
       </select>
     </section>
 
-    <section class="exercise-grid">
+    <p v-if="filteredExercises.length === 0" class="no-results">No exercises match your search.</p>
+
+    <section v-else class="exercise-grid">
       <article v-for="exercise in filteredExercises" :key="exercise.id" class="exercise-card">
         <h2>{{ exercise.name }}</h2>
         <p class="exercise-category">
