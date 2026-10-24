@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 
 const selectedCategory = ref('All')
 
+const searchQuery = ref('')
+
 const categories = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio']
 
 const exercises = [
@@ -128,11 +130,16 @@ const exercises = [
 ]
 
 const filteredExercises = computed(() => {
-  if (selectedCategory.value === 'All') {
-    return exercises
-  }
+  return exercises.filter((exercise) => {
+    const matchesCategory =
+      selectedCategory.value === 'All' || exercise.category === selectedCategory.value
 
-  return exercises.filter((exercise) => exercise.category === selectedCategory.value)
+    const matchesSearch =
+      exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      exercise.muscleGroup.toLowerCase().includes(searchQuery.value.toLowerCase())
+
+    return matchesCategory && matchesSearch
+  })
 })
 </script>
 
@@ -144,6 +151,10 @@ const filteredExercises = computed(() => {
     </header>
 
     <section class="exercise-filters">
+      <label for="search">Search:</label>
+
+      <input id="search" v-model="searchQuery" type="text" placeholder="Search exercises..." />
+
       <label for="category">Filter by category:</label>
 
       <select id="category" v-model="selectedCategory">
