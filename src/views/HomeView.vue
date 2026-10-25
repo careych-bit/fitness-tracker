@@ -5,7 +5,7 @@
 
     <nav>
       <p><router-link to="/workouts">Workouts</router-link></p>
-      <p><router-link to="/exercise">Exercise Library</router-link></p>
+      <p><router-link to="/exercises">Exercise Library</router-link></p>
       <p><router-link to="/goals">Goals</router-link></p>
     </nav>
   </main>
