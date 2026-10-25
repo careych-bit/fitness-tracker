@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import ExercisesView from '../views/ExercisesView.vue'
 
 import Login from '../Login.vue'
 import Register from '../Register.vue'
