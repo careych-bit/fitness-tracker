@@ -5,19 +5,23 @@ import {
   signOut
 } from "firebase/auth";
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { auth } from "./firebase";
 const email = ref('')
 const password = ref('')
+const router = useRouter();
 
 function login() {
   signInWithEmailAndPassword(auth, email.value, password.value)
     .then((cred: UserCredential) => {
-      if (cred.user?.emailVerified) console.log("Signed in as", cred.user?.email);
-      else {
+      if (cred.user?.emailVerified) {
+        console.log("Signed in as", cred.user.email);
+        router.push('/home');
+      } else {
         console.log("Please verify your email first");
         signOut(auth);
-      }
-    })
+  }
+})
     .catch((err: any) => {
       console.error("oops", err);
     })
@@ -41,6 +45,5 @@ function login() {
 
     <button @click="login">Login</button>
     <p>Don't have an account? <router-link to="/register">Register here</router-link>.</p>
-    <p> workouts page <router-link to="/workouts">Workouts</router-link>.</p>
   </div>
 </template>

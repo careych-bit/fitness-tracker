@@ -3,13 +3,13 @@
 import { ref } from "vue";
 
 import {
-  collection,
   addDoc,
-  getDocs,
-  updateDoc,
+  collection,
   deleteDoc,
   doc,
+  getDocs,
   query,
+  updateDoc,
   where
 } from "firebase/firestore";
 
@@ -20,7 +20,7 @@ import {
 } from "firebase/auth";
 
 import { db } from "@/firebase";
-  
+
 interface Workout {
   Workout_ID: string;
   User_ID: string;
@@ -55,7 +55,7 @@ onAuthStateChanged(auth, (user) => {
     workouts.value = [];
   }
 });
-  
+
 async function loadWorkouts() {
 
   if (!currentUser.value) {
@@ -86,7 +86,7 @@ async function loadWorkouts() {
     });
   });
 }
-  
+
 function validateWorkout(): boolean {
 
   if (workoutName.value.trim() === "") {
@@ -152,7 +152,7 @@ async function addWorkout() {
     console.error(error);
   }
 }
-  
+
 function editWorkout(workout: Workout) {
   editingWorkoutId.value = workout.Workout_ID;
   workoutName.value = workout.Workout_name;
@@ -282,7 +282,7 @@ async function deleteWorkout(workoutId: string) {
         maxlength="200"
       ></textarea>
 
-      
+
       <button type="submit">
         {{ editingWorkoutId ? 'Save Changes' : 'Add Workout' }}
       </button>
