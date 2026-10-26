@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
@@ -16,25 +16,14 @@ import {
 import { db } from '@/firebase'
 import { useAuthStore } from '@/stores/authStore'
 
-interface Workout {
-  Workout_ID: string
-  User_ID: string
-  Workout_name: string
-  Date: string
-  Start_Time: string
-  Duration: number
-  Completion: boolean
-  Notes?: string
-}
-
 const workoutName = ref('')
 const scheduledDate = ref('')
 const startTime = ref('')
 const duration = ref(0)
 const completion = ref(false)
 const notes = ref('')
-const workouts = ref<Workout[]>([])
-const editingWorkoutId = ref<string | null>(null)
+const workouts = ref([])
+const editingWorkoutId = ref(null)
 
 const authStore = useAuthStore()
 const { user: currentUser } = storeToRefs(authStore)
@@ -78,7 +67,7 @@ async function loadWorkouts() {
   })
 }
 
-function validateWorkout(): boolean {
+function validateWorkout() {
   if (workoutName.value.trim() === '') {
     alert('Please enter a workout name.')
     return false
@@ -139,7 +128,7 @@ async function addWorkout() {
   }
 }
 
-function editWorkout(workout: Workout) {
+function editWorkout(workout) {
   editingWorkoutId.value = workout.Workout_ID
   workoutName.value = workout.Workout_name
   scheduledDate.value = workout.Date
@@ -183,7 +172,7 @@ async function updateWorkout() {
   }
 }
 
-async function deleteWorkout(workoutId: string) {
+async function deleteWorkout(workoutId) {
   const confirmed = confirm('Are you sure you want to delete this workout?')
 
   if (!confirmed) {
