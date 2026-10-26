@@ -13,6 +13,9 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@vue/devtools-api": "^8.2.1",
+    "firebase": "^13.1.0",
+    "pinia": "^4.1.0",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1"
   },
@@ -33,5 +36,18 @@
   },
   "engines": {
     "node": "^22.18.0 || >=24.12.0"
-  }
+  },
+  "description": "CIS 371 term project.",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/careych-bit/fitness-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/careych-bit/fitness-tracker/issues"
+  },
+  "homepage": "https://github.com/careych-bit/fitness-tracker#readme"
 }
