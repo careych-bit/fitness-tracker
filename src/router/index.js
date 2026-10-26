@@ -6,6 +6,7 @@ import RegisterView from '../views/RegisterView.vue'
 import Goals from '../views/GoalsView.vue'
 import Home from '../views/HomeView.vue'
 import Workout from '../views/WorkoutsView.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,6 +30,7 @@ const router = createRouter({
       path: '/workouts',
       name: 'workouts',
       component: Workout,
+      meta: { requiresAuth: true },
     },
     {
       path: '/exercises',
@@ -39,13 +41,30 @@ const router = createRouter({
       path: '/goals',
       name: 'goals',
       component: Goals,
+      meta: { requiresAuth: true },
     },
     {
       path: '/home',
       name: 'home',
       component: Home,
+      meta: { requiresAuth: true },
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+
+  await authStore.initializeAuth()
+
+  if (to.meta.requiresAuth && !authStore.user) {
+    return {
+      name: 'login',
+      query: {
+        redirect: to.fullPath,
+      },
+    }
+  }
 })
 
 export default router
