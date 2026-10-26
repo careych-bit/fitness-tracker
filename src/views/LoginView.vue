@@ -1,34 +1,49 @@
 <script setup lang="ts">
-import { type UserCredential, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+
 import { auth } from '../firebase'
+
 const email = ref('')
 const password = ref('')
+const errorMessage = ref('')
+const isLoading = ref(false)
+
 const router = useRouter()
 
-function login() {
-  signInWithEmailAndPassword(auth, email.value, password.value)
-    .then((cred: UserCredential) => {
-      if (cred.user?.emailVerified) {
-        console.log('Signed in as', cred.user.email)
+async function login() {
+  if (isLoading.value) {
+    return
+  }
 
-        const redirect =
-          typeof router.currentRoute.value.query.redirect === 'string'
-            ? router.currentRoute.value.query.redirect
-            : '/home'
+  errorMessage.value = ''
+  isLoading.value = true
 
-        router.push(redirect)
-      } else {
-        console.log('Please verify your email first')
-        signOut(auth)
-      }
-    })
-    .catch((err: any) => {
-      console.error('oops', err)
-    })
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email.value, password.value)
+
+    if (!cred.user.emailVerified) {
+      await signOut(auth)
+      errorMessage.value = 'Please verify your email before logging in.'
+      return
+    }
+
+    const redirect =
+      typeof router.currentRoute.value.query.redirect === 'string'
+        ? router.currentRoute.value.query.redirect
+        : '/home'
+
+    await router.push(redirect)
+  } catch (error) {
+    console.error('Login failed:', error)
+    errorMessage.value = 'Unable to log in. Check your email and password and try again.'
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
+
 <template>
   <div>
     <h1>Login</h1>
@@ -37,7 +52,12 @@ function login() {
 
     <input v-model="password" type="password" placeholder="Password" />
 
-    <button @click="login">Login</button>
+    <button type="button" :disabled="isLoading" @click="login">
+      {{ isLoading ? 'Logging in...' : 'Login' }}
+    </button>
+    <p v-if="errorMessage">
+      {{ errorMessage }}
+    </p>
     <p>Don't have an account? <router-link to="/register">Register here</router-link>.</p>
   </div>
 </template>
