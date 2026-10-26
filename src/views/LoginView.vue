@@ -12,7 +12,13 @@ function login() {
     .then((cred: UserCredential) => {
       if (cred.user?.emailVerified) {
         console.log('Signed in as', cred.user.email)
-        router.push('/home')
+
+        const redirect =
+          typeof router.currentRoute.value.query.redirect === 'string'
+            ? router.currentRoute.value.query.redirect
+            : '/home'
+
+        router.push(redirect)
       } else {
         console.log('Please verify your email first')
         signOut(auth)
