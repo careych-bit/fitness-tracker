@@ -8,6 +8,7 @@ import Home from '../views/HomeView.vue'
 import Workout from '../views/WorkoutsView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import WorkoutDetailView from '../views/WorkoutDetailView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = createRouter({
@@ -62,6 +63,11 @@ const router = createRouter({
       name: 'home',
       component: Home,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
     },
   ],
 })
