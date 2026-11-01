@@ -58,11 +58,20 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 npm install
 ```
 
+### Firebase Configuration
+
+The application uses environment variables for Firebase configuration.
+
+After cloning the repository, create a local `.env` file from the provided example:
+
+````sh
+cp .env.example .env
+
 ### Compile and Hot-Reload for Development
 
 ```sh
 npm run dev
-```
+````
 
 ### Compile and Minify for Production
 

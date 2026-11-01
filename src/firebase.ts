@@ -12,6 +12,25 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
+const requiredFirebaseConfig = {
+  apiKey: firebaseConfig.apiKey,
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId,
+  storageBucket: firebaseConfig.storageBucket,
+  messagingSenderId: firebaseConfig.messagingSenderId,
+  appId: firebaseConfig.appId,
+}
+
+const missingConfig = Object.entries(requiredFirebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key)
+
+if (missingConfig.length > 0) {
+  throw new Error(
+    `Missing required Firebase configuration: ${missingConfig.join(', ')}. Check your .env file.`,
+  )
+}
+
 export const myapp: FirebaseApp = initializeApp(firebaseConfig)
 export const db: Firestore = getFirestore(myapp)
 export const auth = getAuth(myapp)
