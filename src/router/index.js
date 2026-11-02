@@ -6,6 +6,9 @@ import RegisterView from '../views/RegisterView.vue'
 import Goals from '../views/GoalsView.vue'
 import Home from '../views/HomeView.vue'
 import Workout from '../views/WorkoutsView.vue'
+import DashboardView from '../views/DashboardView.vue'
+import WorkoutDetailView from '../views/WorkoutDetailView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = createRouter({
@@ -27,9 +30,21 @@ const router = createRouter({
       component: LoginView,
     },
     {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: DashboardView,
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/workouts',
       name: 'workouts',
       component: Workout,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/workout/:id',
+      name: 'workout-detail',
+      component: WorkoutDetailView,
       meta: { requiresAuth: true },
     },
     {
@@ -48,6 +63,11 @@ const router = createRouter({
       name: 'home',
       component: Home,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
     },
   ],
 })
