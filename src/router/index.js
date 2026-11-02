@@ -33,13 +33,6 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-<<<<<<< HEAD
-      path: '/exercise',
-      name: 'exercise',
-      component: Exercise
-    }
-  ]
-=======
       path: '/exercises',
       name: 'exercises',
       component: ExercisesView,
@@ -72,7 +65,6 @@ router.beforeEach(async (to) => {
       },
     }
   }
->>>>>>> main
 })
 
 export default router
