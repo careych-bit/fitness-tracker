@@ -9,6 +9,7 @@ const password = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
+const confirmPassword = ref('')
 
 async function register() {
   if (isLoading.value) {
@@ -17,6 +18,22 @@ async function register() {
 
   errorMessage.value = ''
   successMessage.value = ''
+
+  if (!email.value.trim()) {
+    errorMessage.value = 'Please enter an email address.'
+    return
+  }
+
+  if (password.value.length < 6) {
+    errorMessage.value = 'Password must be at least 6 characters.'
+    return
+  }
+
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = 'Passwords do not match.'
+    return
+  }
+
   isLoading.value = true
 
   try {
@@ -27,6 +44,10 @@ async function register() {
 
     successMessage.value =
       'Account created. Check your email for a verification link before logging in.'
+
+    email.value = ''
+    password.value = ''
+    confirmPassword.value = ''
   } catch (error) {
     console.error('Registration failed:', error)
     errorMessage.value =
@@ -44,6 +65,8 @@ async function register() {
     <input v-model="email" type="email" placeholder="Email" />
 
     <input v-model="password" type="password" placeholder="Password" />
+
+    <input v-model="confirmPassword" type="password" placeholder="Confirm Password" />
 
     <button type="button" :disabled="isLoading" @click="register">
       {{ isLoading ? 'Creating account...' : 'Register' }}
