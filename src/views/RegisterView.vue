@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { FirebaseError } from 'firebase/app'
 import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth'
 import { ref } from 'vue'
 
@@ -50,8 +51,35 @@ async function register() {
     confirmPassword.value = ''
   } catch (error) {
     console.error('Registration failed:', error)
-    errorMessage.value =
-      'Unable to create your account. Check your email and password and try again.'
+
+    if (error instanceof FirebaseError) {
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage.value = 'An account already exists with this email address.'
+          break
+
+        case 'auth/weak-password':
+          errorMessage.value = 'Your password does not meet the required security requirements.'
+          break
+
+        case 'auth/invalid-email':
+          errorMessage.value = 'Please enter a valid email address.'
+          break
+
+        case 'auth/network-request-failed':
+          errorMessage.value = 'Unable to connect. Check your internet connection and try again.'
+          break
+
+        case 'auth/too-many-requests':
+          errorMessage.value = 'Too many attempts. Please try again later.'
+          break
+
+        default:
+          errorMessage.value = 'Unable to create your account. Please try again.'
+      }
+    } else {
+      errorMessage.value = 'Unable to create your account. Please try again.'
+    }
   } finally {
     isLoading.value = false
   }
