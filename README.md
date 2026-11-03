@@ -73,6 +73,40 @@ cp .env.example .env
 npm run dev
 ````
 
+## Firebase Project Setup
+
+This project uses a shared Firebase project for authentication and Cloud Firestore.
+
+### Project configuration
+
+- Firebase project: Fitness Tracker
+- Cloud Firestore database: `(default)`
+- Firestore location: `nam5`
+- Billing plan: Spark (no-cost)
+- Authentication: Email/Password
+- Team members should use their own Google accounts for Firebase Console access. Project roles are managed through Firebase Project Settings under Users and permissions.
+
+### Local development
+
+Firebase client configuration is stored locally in environment variables.
+
+After cloning the repository:
+
+```sh
+npm install
+cp .env.example .env
+```
+
+Add the shared Firebase web-app configuration values to `.env`, then start the development server:
+
+```sh
+npm run dev
+```
+
+The `.env` file is ignored by Git and should not be committed. Firebase web configuration values should be shared privately with approved team members. Service account keys and other privileged credentials should never be committed to the repository.
+
+The project currently uses the Spark plan, so the team should review Firebase usage and billing requirements before enabling services that require a paid plan.
+
 ### Compile and Minify for Production
 
 ```sh
