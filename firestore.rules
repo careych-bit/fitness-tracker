@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function validWorkout(data) {
+      return data.keys().hasAll([
+        'User_ID',
+        'Workout_name',
+        'Date',
+        'Start_Time',
+        'Duration',
+        'Completion',
+        'Notes'
+      ]) &&
+      data.User_ID is string &&
+      data.Workout_name is string &&
+      data.Date is string &&
+      data.Start_Time is string &&
+      data.Duration is number &&
+      data.Duration > 0 &&
+      data.Completion is bool &&
+      data.Notes is string;
+    }
+
+    function validGoal(data) {
+      return data.keys().hasAll([
+        'User_ID',
+        'Metric',
+        'Target'
+      ]) &&
+      data.User_ID is string &&
+      data.Metric is string &&
+      data.Target is number &&
+      data.Target > 0;
+    }
+
+    match /workouts/{workoutId} {
+      allow create: if
+        request.auth != null &&
+        request.auth.uid == request.resource.data.User_ID &&
+        validWorkout(request.resource.data);
+
+      allow read, delete: if
+        request.auth != null &&
+        request.auth.uid == resource.data.User_ID;
+
+      allow update: if
+        request.auth != null &&
+        request.auth.uid == resource.data.User_ID &&
+        request.resource.data.User_ID == resource.data.User_ID &&
+        validWorkout(request.resource.data);
+    }
+
+    match /goals/{goalId} {
+      allow create: if
+        request.auth != null &&
+        request.auth.uid == request.resource.data.User_ID &&
+        validGoal(request.resource.data);
+
+      allow read, delete: if
+        request.auth != null &&
+        request.auth.uid == resource.data.User_ID;
+
+      allow update: if
+        request.auth != null &&
+        request.auth.uid == resource.data.User_ID &&
+        request.resource.data.User_ID == resource.data.User_ID &&
+        validGoal(request.resource.data);
+    }
+
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if false;
+    }
+  }
+}
