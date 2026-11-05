@@ -25,6 +25,10 @@ const completion = ref(false)
 const notes = ref('')
 const workouts = ref([])
 const editingWorkoutId = ref(null)
+const isLoading = ref(false)
+const errorMessage = ref('')
+const isSaving = ref(false)
+const deletingWorkoutId = ref(null)
 
 const authStore = useAuthStore()
 const { user: currentUser } = storeToRefs(authStore)
@@ -47,26 +51,35 @@ async function loadWorkouts() {
     return
   }
 
+  isLoading.value = true
+  errorMessage.value = ''
   workouts.value = []
 
-  const q = query(collection(db, 'workouts'), where('User_ID', '==', currentUser.value.uid))
+  try {
+    const q = query(collection(db, 'workouts'), where('User_ID', '==', currentUser.value.uid))
 
-  const qs = await getDocs(q)
+    const qs = await getDocs(q)
 
-  qs.forEach((qd) => {
-    const workoutData = qd.data()
+    qs.forEach((qd) => {
+      const workoutData = qd.data()
 
-    workouts.value.push({
-      Workout_ID: qd.id,
-      User_ID: workoutData.User_ID,
-      Workout_name: workoutData.Workout_name,
-      Date: workoutData.Date,
-      Start_Time: workoutData.Start_Time,
-      Duration: workoutData.Duration,
-      Completion: workoutData.Completion,
-      Notes: workoutData.Notes,
+      workouts.value.push({
+        Workout_ID: qd.id,
+        User_ID: workoutData.User_ID,
+        Workout_name: workoutData.Workout_name,
+        Date: workoutData.Date,
+        Start_Time: workoutData.Start_Time,
+        Duration: workoutData.Duration,
+        Completion: workoutData.Completion,
+        Notes: workoutData.Notes,
+      })
     })
-  })
+  } catch (error) {
+    console.error(error)
+    errorMessage.value = 'Unable to load workouts. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 function validateWorkout() {
@@ -106,6 +119,8 @@ async function addWorkout() {
     return
   }
 
+  errorMessage.value = ''
+  isSaving.value = true
   try {
     await addDoc(collection(db, 'workouts'), {
       User_ID: currentUser.value.uid,
@@ -127,6 +142,9 @@ async function addWorkout() {
     await loadWorkouts()
   } catch (error) {
     console.error(error)
+    errorMessage.value = 'Unable to create the workout. Please try again.'
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -150,6 +168,8 @@ async function updateWorkout() {
     return
   }
 
+  errorMessage.value = ''
+  isSaving.value = true
   try {
     await updateDoc(doc(db, 'workouts', editingWorkoutId.value), {
       Workout_name: workoutName.value,
@@ -172,6 +192,9 @@ async function updateWorkout() {
     await loadWorkouts()
   } catch (error) {
     console.error(error)
+    errorMessage.value = 'Unable to update the workout. Please try again.'
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -182,12 +205,18 @@ async function deleteWorkout(workoutId) {
     return
   }
 
+  errorMessage.value = ''
+  deletingWorkoutId.value = workoutId
+
   try {
     await deleteDoc(doc(db, 'workouts', workoutId))
 
     await loadWorkouts()
   } catch (error) {
     console.error(error)
+    errorMessage.value = 'Unable to delete the workout. Please try again.'
+  } finally {
+    deletingWorkoutId.value = null
   }
 }
 </script>
@@ -216,12 +245,28 @@ async function deleteWorkout(workoutId) {
       <label for="notes">Notes:</label>
       <textarea id="notes" v-model="notes" maxlength="200"></textarea>
 
-      <button type="submit">
-        {{ editingWorkoutId ? 'Save Changes' : 'Add Workout' }}
+      <button type="submit" :disabled="isSaving">
+        {{
+          isSaving
+            ? editingWorkoutId
+              ? 'Saving Changes...'
+              : 'Adding Workout...'
+            : editingWorkoutId
+              ? 'Save Changes'
+              : 'Add Workout'
+        }}
       </button>
     </form>
 
-    <div v-for="workout in workouts" :key="workout.Workout_ID">
+    <p v-if="isLoading">Loading workouts...</p>
+
+    <p v-else-if="errorMessage">
+      {{ errorMessage }}
+    </p>
+
+    <p v-else-if="workouts.length === 0">No workouts yet. Create your first workout above.</p>
+
+    <div v-else v-for="workout in workouts" :key="workout.Workout_ID">
       <h3>{{ workout.Workout_name }}</h3>
       <p>Date: {{ workout.Date }}</p>
       <p>Start Time: {{ workout.Start_Time }}</p>
@@ -230,7 +275,13 @@ async function deleteWorkout(workoutId) {
       <p>Notes: {{ workout.Notes }}</p>
 
       <button type="button" @click="editWorkout(workout)">Edit</button>
-      <button type="button" @click="deleteWorkout(workout.Workout_ID)">Delete</button>
+      <button
+        type="button"
+        :disabled="deletingWorkoutId === workout.Workout_ID"
+        @click="deleteWorkout(workout.Workout_ID)"
+      >
+        {{ deletingWorkoutId === workout.Workout_ID ? 'Deleting...' : 'Delete' }}
+      </button>
     </div>
 
   </main>
