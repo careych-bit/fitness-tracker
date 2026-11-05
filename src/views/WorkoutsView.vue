@@ -270,7 +270,10 @@ async function deleteWorkout(workoutId) {
       <p>Completed: {{ workout.Completion ? 'Yes' : 'No' }}</p>
       <p>Notes: {{ workout.Notes }}</p>
 
+      <RouterLink :to="`/workout/${workout.Workout_ID}`"> View Workout </RouterLink>
+
       <button type="button" @click="editWorkout(workout)">Edit</button>
+
       <button
         type="button"
         :disabled="deletingWorkoutId === workout.Workout_ID"
