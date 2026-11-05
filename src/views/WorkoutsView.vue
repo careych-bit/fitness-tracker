@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { ref, watch } from 'vue'
 
 import {
   addDoc,
@@ -15,6 +15,16 @@ import {
 
 import { db } from '@/firebase'
 import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function openWorkout(workoutId) {
+  router.push({
+    name: 'workout-detail',
+    params: { id: workoutId },
+  })
+}
 
 const workoutName = ref('')
 const scheduledDate = ref('')
@@ -28,6 +38,7 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const isSaving = ref(false)
 const deletingWorkoutId = ref(null)
+
 
 const authStore = useAuthStore()
 const { user: currentUser } = storeToRefs(authStore)
@@ -270,6 +281,9 @@ async function deleteWorkout(workoutId) {
       <p>Completed: {{ workout.Completion ? 'Yes' : 'No' }}</p>
       <p>Notes: {{ workout.Notes }}</p>
 
+      <button type="button" @click="openWorkout(workout.Workout_ID)">View Workout Details
+
+      </button>
       <button type="button" @click="editWorkout(workout)">Edit</button>
       <button
         type="button"
