@@ -16,7 +16,11 @@ const workoutId = String(route.params.id)
 const authStore = useAuthStore()
 const { user: currentUser } = storeToRefs(authStore)
 const exerciseStore = useExerciseStore()
-const { exercises, isLoading: exercisesLoading } = storeToRefs(exerciseStore)
+const {
+  exercises,
+  isLoading: exercisesLoading,
+  errorMessage: exerciseLibraryError,
+} = storeToRefs(exerciseStore)
 const workout = ref(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -50,18 +54,29 @@ async function loadWorkout() {
       Workout_ID: workoutSnapshot.id,
       ...workoutData,
     }
-    selectedExercises.value = (workoutData.Exercises || []).map((exercise) => ({
-    ...exercise,
+    selectedExercises.value = (workoutData.Exercises || [])
+  .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
+  .map((exercise) => ({
+    id: exercise.Exercise_ID || exercise.id,
+    name: exercise.Name || exercise.name || 'Unnamed Exercise',
+    category: exercise.Category || exercise.category || '',
+    type: exercise.Type || exercise.type || 'strength',
 
-    sets: (exercise.sets || []).map((set) => ({
-      reps: set.reps ?? '',
-      weight: set.weight ?? '',
-    })),
+    sets:
+      (exercise.Type || exercise.type) === 'strength'
+        ? (exercise.Entries || []).map((entry) => ({
+            reps: entry.reps ?? '',
+            weight: entry.weight ?? '',
+          }))
+        : [],
 
-    cardioEntries: (exercise.cardioEntries || []).map((entry) => ({
-      distance: entry.distance ?? '',
-      duration: entry.duration ?? '',
-    })),
+    cardioEntries:
+      (exercise.Type || exercise.type) === 'cardio'
+        ? (exercise.Entries || []).map((entry) => ({
+            distance: entry.distance ?? '',
+            duration: entry.duration ?? '',
+          }))
+        : [],
   }))
   } catch (error) {
     console.error('Error loading workout:', error)
@@ -74,15 +89,12 @@ async function loadPage() {
   errorMessage.value = ''
 
   try {
-    await Promise.all([
-      loadWorkout(),
-      exerciseStore.fetchExercises(),
-    ])
+    await loadWorkout()
+    await exerciseStore.fetchExercises()
   } finally {
     isLoading.value = false
   }
 }
-
 onMounted(loadPage)
 function isValidMeasurement(value) {
   return (
@@ -95,10 +107,6 @@ function isValidMeasurement(value) {
 }
 
 function validateExercises() {
-  if (selectedExercises.value.length === 0) {
-    errorMessage.value = 'Please add at least one exercise before saving.'
-    return false
-  }
   for (const exercise of selectedExercises.value) {
     if (isCardioExercise(exercise)) {
       if (exercise.cardioEntries.length === 0) {
@@ -158,7 +166,6 @@ function validateExercises() {
   return true
 }
 async function saveWorkoutExercises() {
-  console.log('Save Exercises button clicked!')
   if (isSavingExercises.value) {
     return
   }
@@ -182,36 +189,33 @@ async function saveWorkoutExercises() {
   isSavingExercises.value = true
 
   try {
-    const exercisesToSave = selectedExercises.value.map((exercise) => ({
-      id: exercise.id,
-      name: exercise.name,
-      category: exercise.category || '',
-      type: isCardioExercise(exercise) ? 'cardio' : 'strength',
+    const exercisesToSave = selectedExercises.value.map((exercise, index) => ({
+  Exercise_ID: exercise.id,
+  Name: exercise.name,
+  Category: exercise.category || '',
+  Type: isCardioExercise(exercise) ? 'cardio' : 'strength',
+  Order: index,
 
-      sets: isCardioExercise(exercise)
-        ? []
-        : exercise.sets.map((set) => ({
-            reps: Number(set.reps),
-            weight:
-              set.weight === '' || set.weight === null
-                ? null
-                : Number(set.weight),
-          })),
+  Entries: isCardioExercise(exercise)
+    ? exercise.cardioEntries.map((entry) => ({
+        distance:
+          entry.distance === '' || entry.distance === null
+            ? null
+            : Number(entry.distance),
 
-      cardioEntries: isCardioExercise(exercise)
-        ? exercise.cardioEntries.map((entry) => ({
-            distance:
-              entry.distance === '' || entry.distance === null
-                ? null
-                : Number(entry.distance),
-
-            duration:
-              entry.duration === '' || entry.duration === null
-                ? null
-                : Number(entry.duration),
-          }))
-        : [],
-    }))
+        duration:
+          entry.duration === '' || entry.duration === null
+            ? null
+            : Number(entry.duration),
+      }))
+    : exercise.sets.map((set) => ({
+        reps: Number(set.reps),
+        weight:
+          set.weight === '' || set.weight === null
+            ? null
+            : Number(set.weight),
+      })),
+}))
 
     await updateDoc(doc(db, 'workouts', workoutId), {
       Exercises: exercisesToSave,
@@ -277,7 +281,31 @@ function removeExercise(exerciseId) {
     (exercise) => exercise.id !== exerciseId,
   )
 }
+function moveExerciseUp(index) {
+  if (index <= 0) return
 
+  const updatedExercises = [...selectedExercises.value]
+
+  ;[updatedExercises[index - 1], updatedExercises[index]] = [
+    updatedExercises[index],
+    updatedExercises[index - 1],
+  ]
+
+  selectedExercises.value = updatedExercises
+}
+
+function moveExerciseDown(index) {
+  if (index >= selectedExercises.value.length - 1) return
+
+  const updatedExercises = [...selectedExercises.value]
+
+  ;[updatedExercises[index], updatedExercises[index + 1]] = [
+    updatedExercises[index + 1],
+    updatedExercises[index],
+  ]
+
+  selectedExercises.value = updatedExercises
+}
 function addSet(exercise) {
   exercise.sets.push({
     reps: '',
@@ -365,6 +393,9 @@ function removeCardioEntry(exercise, index) {
         </div>
 
         <p v-if="exercisesLoading">Loading exercises...</p>
+        <p v-else-if="exerciseLibraryError" class="error-message">
+        {{ exerciseLibraryError }}
+        </p>
 
       </section>
 
@@ -377,13 +408,29 @@ function removeCardioEntry(exercise, index) {
   </p>
 
   <div
-    v-for="exercise in selectedExercises"
+    v-for="(exercise, index) in selectedExercises"
     :key="exercise.id"
     class="exercise-card"
-  >
+    >
 
     <h4>{{ exercise.name }}</h4>
+    <div class="exercise-order-buttons">
+    <button
+    type="button"
+    @click="moveExerciseUp(index)"
+    :disabled="index === 0"
+    >
+      Move Up
+    </button>
 
+    <button
+    type="button"
+    @click="moveExerciseDown(index)"
+    :disabled="index === selectedExercises.length - 1"
+    >
+    Move Down
+    </button>
+    </div>
     <p class="exercise-category">
       Category: {{ exercise.category }}
     </p>
@@ -776,3 +823,4 @@ function removeCardioEntry(exercise, index) {
   border-radius: 8px;
 }
 </style>
+

@@ -610,14 +610,12 @@ async function deleteWorkout(workoutId) {
   border-radius: 8px;
 }
 
-/* Input focus */
 .workouts-page input:focus,
 .workouts-page textarea:focus {
   outline: 2px solid #91b69b;
   border-color: #668f70;
 }
 
-/* Mobile layout */
 @media (max-width: 700px) {
   .workouts-page {
     padding: 24px 14px;

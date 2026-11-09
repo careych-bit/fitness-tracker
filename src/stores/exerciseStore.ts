@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import { collection, getDocs } from 'firebase/firestore'
+import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { db } from '../firebase'
