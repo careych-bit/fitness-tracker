@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { ref, watch } from 'vue'
 
 import {
   addDoc,
@@ -15,6 +15,16 @@ import {
 
 import { db } from '@/firebase'
 import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function openWorkout(workoutId) {
+  router.push({
+    name: 'workout-detail',
+    params: { id: workoutId },
+  })
+}
 
 const workoutName = ref('')
 const scheduledDate = ref('')
@@ -28,6 +38,7 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const isSaving = ref(false)
 const deletingWorkoutId = ref(null)
+
 
 const authStore = useAuthStore()
 const { user: currentUser } = storeToRefs(authStore)
@@ -219,69 +230,175 @@ async function deleteWorkout(workoutId) {
 </script>
 
 <template>
-  <main>
-    <h1>Workouts</h1>
+  <main class="workouts-page">
 
-    <form @submit.prevent="editingWorkoutId ? updateWorkout() : addWorkout()">
-      <label for="workoutName">Workout Name:</label>
-      <input id="workoutName" v-model="workoutName" type="text" required maxlength="50" />
+    <div class="workouts-container">
 
-      <label for="scheduledDate">Date:</label>
-      <input id="scheduledDate" v-model="scheduledDate" type="date" required />
+      <h1>Workouts</h1>
+      <section class="workout-form-section">
 
-      <label for="startTime">Start Time:</label>
-      <input id="startTime" v-model="startTime" type="time" required />
+        <h2>{{ editingWorkoutId ? 'Edit Workout' : 'Create a Workout' }}</h2>
 
-      <label for="duration">Duration (minutes):</label>
-      <input id="duration" v-model.number="duration" type="number" min="1" max="180" required />
+        <form
+          class="workout-form"
+          @submit.prevent="editingWorkoutId ? updateWorkout() : addWorkout()"
+        >
 
-      <label for="completion">Completed:</label>
-      <input id="completion" v-model="completion" type="checkbox" />
+          <div class="form-field">
+            <label for="workoutName">Workout Name:</label>
+            <input
+              id="workoutName"
+              v-model="workoutName"
+              type="text"
+              required
+              maxlength="50"
+            />
+          </div>
 
-      <label for="notes">Notes:</label>
-      <textarea id="notes" v-model="notes" maxlength="200"></textarea>
+          <div class="form-field">
+            <label for="scheduledDate">Date:</label>
+            <input
+              id="scheduledDate"
+              v-model="scheduledDate"
+              type="date"
+              required
+            />
+          </div>
 
-      <button type="submit" :disabled="isSaving">
-        {{
-          isSaving
-            ? editingWorkoutId
-              ? 'Saving Changes...'
-              : 'Adding Workout...'
-            : editingWorkoutId
-              ? 'Save Changes'
-              : 'Add Workout'
-        }}
-      </button>
-    </form>
+          <div class="form-field">
+            <label for="startTime">Start Time:</label>
+            <input
+              id="startTime"
+              v-model="startTime"
+              type="time"
+              required
+            />
+          </div>
 
-    <p v-if="isLoading">Loading workouts...</p>
+          <div class="form-field">
+            <label for="duration">Duration (minutes):</label>
+            <input
+              id="duration"
+              v-model.number="duration"
+              type="number"
+              min="1"
+              max="180"
+              required
+            />
+          </div>
 
-    <p v-else-if="errorMessage">
-      {{ errorMessage }}
-    </p>
+          <div class="form-field notes-field">
+            <label for="notes">Notes:</label>
+            <textarea
+              id="notes"
+              v-model="notes"
+              maxlength="200"
+            ></textarea>
+          </div>
 
-    <p v-else-if="workouts.length === 0">No workouts yet. Create your first workout above.</p>
+          <div class="completion-field">
+            <input
+              id="completion"
+              v-model="completion"
+              type="checkbox"
+            />
+            <label for="completion">Completed</label>
+          </div>
 
-    <div v-else v-for="workout in workouts" :key="workout.Workout_ID">
-      <h3>{{ workout.Workout_name }}</h3>
-      <p>Date: {{ workout.Date }}</p>
-      <p>Start Time: {{ workout.Start_Time }}</p>
-      <p>Duration: {{ workout.Duration }} minutes</p>
-      <p>Completed: {{ workout.Completion ? 'Yes' : 'No' }}</p>
-      <p>Notes: {{ workout.Notes }}</p>
+          <div class="form-actions">
+            <button type="submit" :disabled="isSaving">
+              {{
+                isSaving
+                  ? editingWorkoutId
+                    ? 'Saving Changes...'
+                    : 'Adding Workout...'
+                  : editingWorkoutId
+                    ? 'Save Changes'
+                    : 'Add Workout'
+              }}
+            </button>
+          </div>
 
-      <RouterLink :to="`/workout/${workout.Workout_ID}`"> View Workout </RouterLink>
+        </form>
 
-      <button type="button" @click="editWorkout(workout)">Edit</button>
+      </section>
+      <p v-if="isLoading" class="status-message">
+        Loading workouts...
+      </p>
 
-      <button
-        type="button"
-        :disabled="deletingWorkoutId === workout.Workout_ID"
-        @click="deleteWorkout(workout.Workout_ID)"
-      >
-        {{ deletingWorkoutId === workout.Workout_ID ? 'Deleting...' : 'Delete' }}
-      </button>
+      <p v-else-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </p>
+
+      <p v-else-if="workouts.length === 0" class="empty-message">
+        No workouts yet. Create your first workout above.
+      </p>
+      <section v-else class="workout-list-section">
+
+        <h2>Your Workouts</h2>
+
+        <div class="workout-grid">
+
+          <div
+            v-for="workout in workouts"
+            :key="workout.Workout_ID"
+            class="workout-card"
+          >
+
+            <div class="workout-card-header">
+              <h3>{{ workout.Workout_name }}</h3>
+
+              <span
+                :class="workout.Completion ? 'completed-badge' : 'pending-badge'"
+              >
+                {{ workout.Completion ? 'Completed' : 'Planned' }}
+              </span>
+            </div>
+
+            <div class="workout-card-details">
+              <p>Date: {{ workout.Date }}</p>
+              <p>Start Time: {{ workout.Start_Time }}</p>
+              <p>Duration: {{ workout.Duration }} minutes</p>
+              <p>Notes: {{ workout.Notes || 'No notes added.' }}</p>
+            </div>
+
+            <div class="workout-card-actions">
+
+              <button
+                type="button"
+                class="details-button"
+                @click="openWorkout(workout.Workout_ID)"
+              >
+                View Workout Details
+              </button>
+
+              <button
+                type="button"
+                class="edit-button"
+                @click="editWorkout(workout)"
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                class="delete-button"
+                :disabled="deletingWorkoutId === workout.Workout_ID"
+                @click="deleteWorkout(workout.Workout_ID)"
+              >
+                {{ deletingWorkoutId === workout.Workout_ID ? 'Deleting...' : 'Delete' }}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
     </div>
+
   </main>
 </template>
 
