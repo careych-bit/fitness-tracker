@@ -1,5 +1,5 @@
 <script setup>
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -28,6 +28,7 @@ const selectedExerciseId = ref('')
 const searchQuery = ref('')
 const selectedExercises = ref([])
 const isSavingExercises = ref(false)
+const isCompletingWorkout = ref(false)
 
 async function loadWorkout() {
   if (!currentUser.value) {
@@ -55,29 +56,29 @@ async function loadWorkout() {
       ...workoutData,
     }
     selectedExercises.value = (workoutData.Exercises || [])
-  .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
-  .map((exercise) => ({
-    id: exercise.Exercise_ID || exercise.id,
-    name: exercise.Name || exercise.name || 'Unnamed Exercise',
-    category: exercise.Category || exercise.category || '',
-    type: exercise.Type || exercise.type || 'strength',
+      .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0))
+      .map((exercise) => ({
+        id: exercise.Exercise_ID || exercise.id,
+        name: exercise.Name || exercise.name || 'Unnamed Exercise',
+        category: exercise.Category || exercise.category || '',
+        type: exercise.Type || exercise.type || 'strength',
 
-    sets:
-      (exercise.Type || exercise.type) === 'strength'
-        ? (exercise.Entries || []).map((entry) => ({
-            reps: entry.reps ?? '',
-            weight: entry.weight ?? '',
-          }))
-        : [],
+        sets:
+          (exercise.Type || exercise.type) === 'strength'
+            ? (exercise.Entries || []).map((entry) => ({
+                reps: entry.reps ?? '',
+                weight: entry.weight ?? '',
+              }))
+            : [],
 
-    cardioEntries:
-      (exercise.Type || exercise.type) === 'cardio'
-        ? (exercise.Entries || []).map((entry) => ({
-            distance: entry.distance ?? '',
-            duration: entry.duration ?? '',
-          }))
-        : [],
-  }))
+        cardioEntries:
+          (exercise.Type || exercise.type) === 'cardio'
+            ? (exercise.Entries || []).map((entry) => ({
+                distance: entry.distance ?? '',
+                duration: entry.duration ?? '',
+              }))
+            : [],
+      }))
   } catch (error) {
     console.error('Error loading workout:', error)
     errorMessage.value = 'Unable to load workout details.'
@@ -116,14 +117,10 @@ function validateExercises() {
 
       for (const entry of exercise.cardioEntries) {
         const hasDistance =
-          entry.distance !== '' &&
-          entry.distance !== null &&
-          entry.distance !== undefined
+          entry.distance !== '' && entry.distance !== null && entry.distance !== undefined
 
         const hasDuration =
-          entry.duration !== '' &&
-          entry.duration !== null &&
-          entry.duration !== undefined
+          entry.duration !== '' && entry.duration !== null && entry.duration !== undefined
 
         if (!hasDistance && !hasDuration) {
           errorMessage.value = 'Enter a distance or duration for cardio.'
@@ -170,6 +167,11 @@ async function saveWorkoutExercises() {
     return
   }
 
+  if (workout.value?.Completion) {
+    errorMessage.value = 'Completed workouts are read-only.'
+    return
+  }
+
   errorMessage.value = ''
 
   if (!currentUser.value || !workout.value) {
@@ -190,32 +192,25 @@ async function saveWorkoutExercises() {
 
   try {
     const exercisesToSave = selectedExercises.value.map((exercise, index) => ({
-  Exercise_ID: exercise.id,
-  Name: exercise.name,
-  Category: exercise.category || '',
-  Type: isCardioExercise(exercise) ? 'cardio' : 'strength',
-  Order: index,
+      Exercise_ID: exercise.id,
+      Name: exercise.name,
+      Category: exercise.category || '',
+      Type: isCardioExercise(exercise) ? 'cardio' : 'strength',
+      Order: index,
 
-  Entries: isCardioExercise(exercise)
-    ? exercise.cardioEntries.map((entry) => ({
-        distance:
-          entry.distance === '' || entry.distance === null
-            ? null
-            : Number(entry.distance),
+      Entries: isCardioExercise(exercise)
+        ? exercise.cardioEntries.map((entry) => ({
+            distance:
+              entry.distance === '' || entry.distance === null ? null : Number(entry.distance),
 
-        duration:
-          entry.duration === '' || entry.duration === null
-            ? null
-            : Number(entry.duration),
-      }))
-    : exercise.sets.map((set) => ({
-        reps: Number(set.reps),
-        weight:
-          set.weight === '' || set.weight === null
-            ? null
-            : Number(set.weight),
-      })),
-}))
+            duration:
+              entry.duration === '' || entry.duration === null ? null : Number(entry.duration),
+          }))
+        : exercise.sets.map((set) => ({
+            reps: Number(set.reps),
+            weight: set.weight === '' || set.weight === null ? null : Number(set.weight),
+          })),
+    }))
 
     await updateDoc(doc(db, 'workouts', workoutId), {
       Exercises: exercisesToSave,
@@ -231,6 +226,76 @@ async function saveWorkoutExercises() {
     isSavingExercises.value = false
   }
 }
+
+async function completeWorkout() {
+  if (isCompletingWorkout.value) {
+    return
+  }
+
+  errorMessage.value = ''
+
+  if (!currentUser.value || !workout.value) {
+    errorMessage.value = 'Unable to complete workout. Please sign in.'
+    return
+  }
+
+  if (workout.value.User_ID !== currentUser.value.uid) {
+    errorMessage.value = 'You do not have permission to complete this workout.'
+    return
+  }
+
+  if (workout.value.Completion) {
+    errorMessage.value = 'This workout has already been completed.'
+    return
+  }
+
+  if (selectedExercises.value.length === 0) {
+    errorMessage.value = 'Add at least one exercise before completing the workout.'
+    return
+  }
+
+  if (!validateExercises()) {
+    return
+  }
+
+  isCompletingWorkout.value = true
+
+  try {
+    const exercisesToSave = selectedExercises.value.map((exercise, index) => ({
+      Exercise_ID: exercise.id,
+      Name: exercise.name,
+      Category: exercise.category || '',
+      Type: isCardioExercise(exercise) ? 'cardio' : 'strength',
+      Order: index,
+
+      Entries: isCardioExercise(exercise)
+        ? exercise.cardioEntries.map((entry) => ({
+            distance:
+              entry.distance === '' || entry.distance === null ? null : Number(entry.distance),
+            duration:
+              entry.duration === '' || entry.duration === null ? null : Number(entry.duration),
+          }))
+        : exercise.sets.map((set) => ({
+            reps: Number(set.reps),
+            weight: set.weight === '' || set.weight === null ? null : Number(set.weight),
+          })),
+    }))
+
+    await updateDoc(doc(db, 'workouts', workoutId), {
+      Exercises: exercisesToSave,
+      Completion: true,
+      Completed_At: serverTimestamp(),
+    })
+
+    await loadWorkout()
+  } catch (error) {
+    console.error('Error completing workout:', error)
+    errorMessage.value = 'Unable to complete workout. Please try again.'
+  } finally {
+    isCompletingWorkout.value = false
+  }
+}
+
 const filteredExercises = computed(() => {
   return exercises.value.filter((exercise) => {
     return (
@@ -240,23 +305,16 @@ const filteredExercises = computed(() => {
   })
 })
 function isCardioExercise(exercise) {
-  return (
-    exercise.type?.toLowerCase() === 'cardio' ||
-    exercise.category?.toLowerCase() === 'cardio'
-  )
+  return exercise.type?.toLowerCase() === 'cardio' || exercise.category?.toLowerCase() === 'cardio'
 }
 function addExercise() {
-  const exercise = exercises.value.find(
-    (exercise) => exercise.id === selectedExerciseId.value,
-  )
+  const exercise = exercises.value.find((exercise) => exercise.id === selectedExerciseId.value)
 
   if (!exercise) {
     return
   }
 
-  const alreadyAdded = selectedExercises.value.some(
-    (item) => item.id === exercise.id,
-  )
+  const alreadyAdded = selectedExercises.value.some((item) => item.id === exercise.id)
 
   if (alreadyAdded) {
     errorMessage.value = 'This exercise has already been added.'
@@ -264,22 +322,16 @@ function addExercise() {
   }
 
   selectedExercises.value.push({
-  ...exercise,
-  sets: isCardioExercise(exercise)
-    ? []
-    : [{ reps: '', weight: '' }],
-  cardioEntries: isCardioExercise(exercise)
-    ? [{ distance: '', duration: '' }]
-    : [],
+    ...exercise,
+    sets: isCardioExercise(exercise) ? [] : [{ reps: '', weight: '' }],
+    cardioEntries: isCardioExercise(exercise) ? [{ distance: '', duration: '' }] : [],
   })
 
   selectedExerciseId.value = ''
   errorMessage.value = ''
 }
 function removeExercise(exerciseId) {
-  selectedExercises.value = selectedExercises.value.filter(
-    (exercise) => exercise.id !== exerciseId,
-  )
+  selectedExercises.value = selectedExercises.value.filter((exercise) => exercise.id !== exerciseId)
 }
 function moveExerciseUp(index) {
   if (index <= 0) return
@@ -340,7 +392,6 @@ function removeCardioEntry(exercise, index) {
     </p>
 
     <section v-else-if="workout" class="workout-container">
-
       <p v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </p>
@@ -354,211 +405,175 @@ function removeCardioEntry(exercise, index) {
         <p>Notes: {{ workout.Notes }}</p>
       </div>
 
-      <section class="add-exercise-section">
-
+      <section v-if="!workout.Completion" class="add-exercise-section">
         <h3>Add Exercises to Workout</h3>
 
         <div class="exercise-search">
+          <input v-model="searchQuery" type="text" placeholder="Search exercises..." />
 
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search exercises..."
-          />
-
-          <select
-            v-model="selectedExerciseId"
-            :disabled="exercisesLoading"
-          >
+          <select v-model="selectedExerciseId" :disabled="exercisesLoading">
             <option value="" disabled>Select an exercise</option>
 
-            <option
-              v-for="exercise in filteredExercises"
-              :key="exercise.id"
-              :value="exercise.id"
-            >
+            <option v-for="exercise in filteredExercises" :key="exercise.id" :value="exercise.id">
               {{ exercise.name }}
               ({{ isCardioExercise(exercise) ? 'Cardio' : 'Strength' }})
             </option>
           </select>
 
-          <button
-            type="button"
-            @click="addExercise"
-            :disabled="!selectedExerciseId"
-          >
+          <button type="button" @click="addExercise" :disabled="!selectedExerciseId">
             Add Exercise
           </button>
-
         </div>
 
         <p v-if="exercisesLoading">Loading exercises...</p>
         <p v-else-if="exerciseLibraryError" class="error-message">
-        {{ exerciseLibraryError }}
+          {{ exerciseLibraryError }}
         </p>
-
       </section>
 
-    <section class="selected-exercises-section">
+      <section class="selected-exercises-section">
+        <h3>Selected Exercises</h3>
 
-  <h3>Selected Exercises</h3>
+        <p v-if="selectedExercises.length === 0">No exercises added yet.</p>
 
-  <p v-if="selectedExercises.length === 0">
-    No exercises added yet.
-  </p>
+        <div
+          v-for="(exercise, index) in selectedExercises"
+          :key="exercise.id"
+          class="exercise-card"
+        >
+          <h4>{{ exercise.name }}</h4>
+          <div v-if="!workout.Completion" class="exercise-order-buttons">
+            <button type="button" @click="moveExerciseUp(index)" :disabled="index === 0">
+              Move Up
+            </button>
 
-  <div
-    v-for="(exercise, index) in selectedExercises"
-    :key="exercise.id"
-    class="exercise-card"
-    >
+            <button
+              type="button"
+              @click="moveExerciseDown(index)"
+              :disabled="index === selectedExercises.length - 1"
+            >
+              Move Down
+            </button>
+          </div>
+          <p class="exercise-category">Category: {{ exercise.category }}</p>
+          <div v-if="!isCardioExercise(exercise)" class="strength-section">
+            <h5>Strength Sets</h5>
 
-    <h4>{{ exercise.name }}</h4>
-    <div class="exercise-order-buttons">
-    <button
-    type="button"
-    @click="moveExerciseUp(index)"
-    :disabled="index === 0"
-    >
-      Move Up
-    </button>
+            <div v-for="(set, index) in exercise.sets" :key="index" class="measurement-row">
+              <h6>Set {{ index + 1 }}</h6>
 
-    <button
-    type="button"
-    @click="moveExerciseDown(index)"
-    :disabled="index === selectedExercises.length - 1"
-    >
-    Move Down
-    </button>
-    </div>
-    <p class="exercise-category">
-      Category: {{ exercise.category }}
-    </p>
-    <div v-if="!isCardioExercise(exercise)" class="strength-section">
+              <div class="measurement-inputs">
+                <label>
+                  Reps (reps):
+                  <input
+                    v-model.number="set.reps"
+                    type="number"
+                    min="0"
+                    step="any"
+                    :disabled="workout.Completion"
+                  />
+                </label>
 
-      <h5>Strength Sets</h5>
+                <label>
+                  Weight (lbs, optional):
+                  <input
+                    v-model.number="set.weight"
+                    type="number"
+                    min="0"
+                    step="any"
+                    :disabled="workout.Completion"
+                  />
+                </label>
 
-      <div
-        v-for="(set, index) in exercise.sets"
-        :key="index"
-        class="measurement-row"
-      >
+                <button
+                  v-if="!workout.Completion"
+                  type="button"
+                  @click="removeSet(exercise, index)"
+                  class="remove-button"
+                >
+                  Remove Set
+                </button>
+              </div>
+            </div>
 
-        <h6>Set {{ index + 1 }}</h6>
+            <button
+              v-if="!workout.Completion"
+              type="button"
+              @click="addSet(exercise)"
+              class="add-button"
+            >
+              + Add Set
+            </button>
+          </div>
+          <div v-else-if="isCardioExercise(exercise)" class="cardio-section">
+            <h5>Cardio Entries</h5>
 
-        <div class="measurement-inputs">
+            <div
+              v-for="(entry, index) in exercise.cardioEntries"
+              :key="index"
+              class="measurement-row"
+            >
+              <h6>Entry {{ index + 1 }}</h6>
 
-          <label>
-            Reps (reps):
-            <input
-              v-model.number="set.reps"
-              type="number"
-              min="0"
-              step="any"
-            />
-          </label>
+              <div class="measurement-inputs">
+                <label>
+                  Distance (mi):
+                  <input
+                    v-model.number="entry.distance"
+                    type="number"
+                    min="0"
+                    step="any"
+                    :disabled="workout.Completion"
+                  />
+                </label>
 
-          <label>
-            Weight (lbs, optional):
-            <input
-              v-model.number="set.weight"
-              type="number"
-              min="0"
-              step="any"
-            />
-          </label>
+                <label>
+                  Duration (min):
+                  <input
+                    v-model.number="entry.duration"
+                    type="number"
+                    min="0"
+                    step="any"
+                    :disabled="workout.Completion"
+                  />
+                </label>
+
+                <button
+                  v-if="!workout.Completion"
+                  type="button"
+                  @click="removeCardioEntry(exercise, index)"
+                  class="remove-button"
+                >
+                  Remove Entry
+                </button>
+              </div>
+            </div>
+
+            <button
+              v-if="!workout.Completion"
+              type="button"
+              @click="addCardioEntry(exercise)"
+              class="add-button"
+            >
+              + Add Cardio Entry
+            </button>
+          </div>
 
           <button
+            v-if="!workout.Completion"
             type="button"
-            @click="removeSet(exercise, index)"
-            class="remove-button"
+            @click="removeExercise(exercise.id)"
+            class="remove-exercise-button"
           >
-            Remove Set
+            Remove Exercise
           </button>
-
         </div>
-      </div>
+      </section>
 
-      <button
-        type="button"
-        @click="addSet(exercise)"
-        class="add-button"
-      >
-        + Add Set
-      </button>
-
-    </div>
-    <div v-else-if="isCardioExercise(exercise)" class="cardio-section">
-
-      <h5>Cardio Entries</h5>
-
-      <div
-        v-for="(entry, index) in exercise.cardioEntries"
-        :key="index"
-        class="measurement-row"
-      >
-
-        <h6>Entry {{ index + 1 }}</h6>
-
-        <div class="measurement-inputs">
-
-          <label>
-            Distance (mi):
-            <input
-              v-model.number="entry.distance"
-              type="number"
-              min="0"
-              step="any"
-            />
-          </label>
-
-          <label>
-            Duration (min):
-            <input
-              v-model.number="entry.duration"
-              type="number"
-              min="0"
-              step="any"
-            />
-          </label>
-
-          <button
-            type="button"
-            @click="removeCardioEntry(exercise, index)"
-            class="remove-button"
-          >
-            Remove Entry
-          </button>
-
-        </div>
-      </div>
-
-      <button
-        type="button"
-        @click="addCardioEntry(exercise)"
-        class="add-button"
-      >
-        + Add Cardio Entry
-      </button>
-
-    </div>
-
-    <button
-      type="button"
-      @click="removeExercise(exercise.id)"
-      class="remove-exercise-button"
-    >
-      Remove Exercise
-    </button>
-
-  </div>
-
-</section>
-
-    <hr />
-<div class="workout-actions">
-
+      <hr />
+      <div class="workout-actions">
         <button
+          v-if="!workout.Completion"
           type="button"
           @click="saveWorkoutExercises"
           :disabled="isSavingExercises"
@@ -568,15 +583,18 @@ function removeCardioEntry(exercise, index) {
         </button>
 
         <button
+          v-if="!workout.Completion"
           type="button"
-          @click="router.push({ name: 'workouts' })"
-          class="back-button"
+          @click="completeWorkout"
+          :disabled="isCompletingWorkout"
         >
-          Back to Workouts
+          {{ isCompletingWorkout ? 'Completing Workout...' : 'Complete Workout' }}
         </button>
 
+        <button type="button" @click="router.push({ name: 'workouts' })" class="back-button">
+          Back to Workouts
+        </button>
       </div>
-
     </section>
   </main>
 </template>
@@ -664,7 +682,7 @@ function removeCardioEntry(exercise, index) {
   margin-top: 22px;
 }
 
-.workout-page input[type="number"] {
+.workout-page input[type='number'] {
   padding: 9px 12px;
   border: 1px solid #d5ded8;
   border-radius: 7px;
@@ -733,7 +751,7 @@ function removeCardioEntry(exercise, index) {
     padding: 16px;
   }
 
-  .workout-page input[type="number"] {
+  .workout-page input[type='number'] {
     max-width: 100%;
     box-sizing: border-box;
   }
@@ -823,4 +841,3 @@ function removeCardioEntry(exercise, index) {
   border-radius: 8px;
 }
 </style>
-
