@@ -36,21 +36,36 @@ service cloud.firestore {
     }
 
     match /workouts/{workoutId} {
-      allow create: if
-        request.auth != null &&
-        request.auth.uid == request.resource.data.User_ID &&
-        validWorkout(request.resource.data);
+  allow create: if
+    request.auth != null &&
+    request.auth.uid == request.resource.data.User_ID &&
+    validWorkout(request.resource.data) &&
+    request.resource.data.Completion == false;
 
-      allow read, delete: if
-        request.auth != null &&
-        request.auth.uid == resource.data.User_ID;
+  allow read: if
+    request.auth != null &&
+    request.auth.uid == resource.data.User_ID;
 
-      allow update: if
-        request.auth != null &&
-        request.auth.uid == resource.data.User_ID &&
-        request.resource.data.User_ID == resource.data.User_ID &&
-        validWorkout(request.resource.data);
-    }
+  allow delete: if
+    request.auth != null &&
+    request.auth.uid == resource.data.User_ID &&
+    resource.data.Completion != true;
+
+  allow update: if
+    request.auth != null &&
+    request.auth.uid == resource.data.User_ID &&
+    resource.data.Completion != true &&
+    request.resource.data.User_ID == resource.data.User_ID &&
+    validWorkout(request.resource.data) &&
+    (
+      request.resource.data.Completion == false ||
+      (
+        request.resource.data.Completion == true &&
+        request.resource.data.Completed_At is timestamp &&
+        request.resource.data.Completed_At == request.time
+      )
+    );
+}
 
     match /goals/{goalId} {
       allow create: if
