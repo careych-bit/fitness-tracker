@@ -24,16 +24,40 @@ service cloud.firestore {
     }
 
     function validGoal(data) {
-      return data.keys().hasAll([
-        'User_ID',
-        'Metric',
-        'Target'
-      ]) &&
-      data.User_ID is string &&
-      data.Metric is string &&
-      data.Target is number &&
-      data.Target > 0;
-    }
+  return data.keys().hasAll([
+    'User_ID',
+    'Metric',
+    'Target',
+    'Unit',
+    'Start_Date',
+    'Target_Date',
+    'Created_At',
+    'Updated_At'
+  ]) &&
+  data.keys().hasOnly([
+    'User_ID',
+    'Metric',
+    'Target',
+    'Unit',
+    'Start_Date',
+    'Target_Date',
+    'Created_At',
+    'Updated_At'
+  ]) &&
+  data.User_ID is string &&
+  data.Metric == 'workouts' &&
+  data.Target is number &&
+  data.Target > 0 &&
+  data.Target % 1 == 0 &&
+  data.Unit == 'workouts' &&
+  data.Start_Date is string &&
+  data.Start_Date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+  data.Target_Date is string &&
+  data.Target_Date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+  data.Start_Date <= data.Target_Date &&
+  data.Created_At is timestamp &&
+  data.Updated_At is timestamp;
+}
 
     match /workouts/{workoutId} {
   allow create: if
@@ -68,21 +92,25 @@ service cloud.firestore {
 }
 
     match /goals/{goalId} {
-      allow create: if
-        request.auth != null &&
-        request.auth.uid == request.resource.data.User_ID &&
-        validGoal(request.resource.data);
+  allow create: if
+    request.auth != null &&
+    request.auth.uid == request.resource.data.User_ID &&
+    validGoal(request.resource.data) &&
+    request.resource.data.Created_At == request.time &&
+    request.resource.data.Updated_At == request.time;
 
-      allow read, delete: if
-        request.auth != null &&
-        request.auth.uid == resource.data.User_ID;
+  allow read, delete: if
+    request.auth != null &&
+    request.auth.uid == resource.data.User_ID;
 
-      allow update: if
-        request.auth != null &&
-        request.auth.uid == resource.data.User_ID &&
-        request.resource.data.User_ID == resource.data.User_ID &&
-        validGoal(request.resource.data);
-    }
+  allow update: if
+    request.auth != null &&
+    request.auth.uid == resource.data.User_ID &&
+    request.resource.data.User_ID == resource.data.User_ID &&
+    request.resource.data.Created_At == resource.data.Created_At &&
+    request.resource.data.Updated_At == request.time &&
+    validGoal(request.resource.data);
+}
 
     match /exercises/{exerciseId} {
       allow read: if request.auth != null;
