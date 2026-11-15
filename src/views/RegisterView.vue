@@ -88,8 +88,10 @@ async function register() {
 
 <template>
   <div>
-    <h1>Register</h1>
-
+    <v-card class="regcard">
+    <v-card-title>Register</v-card-title>
+    
+    <v-card-actions>
     <input v-model="email" type="email" placeholder="Email" />
 
     <input v-model="password" type="password" placeholder="Password" />
@@ -99,6 +101,8 @@ async function register() {
     <button type="button" :disabled="isLoading" @click="register">
       {{ isLoading ? 'Creating account...' : 'Register' }}
     </button>
+    </v-card-actions>
+
 
     <p v-if="errorMessage">
       {{ errorMessage }}
@@ -108,7 +112,25 @@ async function register() {
       {{ successMessage }}
     </p>
 
-    <p>After registering, please check your email for a verification link before logging in.</p>
-    <p>Already have an account? <router-link to="/login">Login here</router-link>.</p>
+    <v-card-text>
+    <span>After registering, please check your email for a verification link before logging in.</span>
+    <span>Already have an account? <router-link to="/login">Login here</router-link>.</span>
+    </v-card-text>
+
+    </v-card>
   </div>
 </template>
+
+<style scoped>
+
+div {
+  display: flex;
+  flex-direction: column;  
+}
+
+.regcard {
+  background: lightblue;
+  color: black;
+}
+
+</style>
