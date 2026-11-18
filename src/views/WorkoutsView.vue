@@ -1,6 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import {
   addDoc,
@@ -30,15 +30,27 @@ const workoutName = ref('')
 const scheduledDate = ref('')
 const startTime = ref('')
 const duration = ref(0)
-const completion = ref(false)
 const notes = ref('')
 const workouts = ref([])
+
+const activeWorkouts = computed(() => workouts.value.filter((workout) => !workout.Completion))
+
+const completedWorkouts = computed(() =>
+  workouts.value
+    .filter((workout) => workout.Completion)
+    .sort((a, b) => {
+      const dateA = a.Completed_At?.toDate?.()?.getTime() || 0
+      const dateB = b.Completed_At?.toDate?.()?.getTime() || 0
+
+      return dateB - dateA
+    }),
+)
+
 const editingWorkoutId = ref(null)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const isSaving = ref(false)
 const deletingWorkoutId = ref(null)
-
 
 const authStore = useAuthStore()
 const { user: currentUser } = storeToRefs(authStore)
@@ -80,6 +92,7 @@ async function loadWorkouts() {
         Start_Time: workoutData.Start_Time,
         Duration: workoutData.Duration,
         Completion: workoutData.Completion,
+        Completed_At: workoutData.Completed_At || null,
         Notes: workoutData.Notes,
       })
     })
@@ -89,6 +102,14 @@ async function loadWorkouts() {
   } finally {
     isLoading.value = false
   }
+}
+
+function formatCompletedAt(timestamp) {
+  if (!timestamp?.toDate) {
+    return 'Completion time unavailable'
+  }
+
+  return timestamp.toDate().toLocaleString()
 }
 
 function validateWorkout() {
@@ -137,7 +158,7 @@ async function addWorkout() {
       Date: scheduledDate.value,
       Start_Time: startTime.value,
       Duration: duration.value,
-      Completion: completion.value,
+      Completion: false,
       Notes: notes.value,
     })
 
@@ -145,7 +166,6 @@ async function addWorkout() {
     scheduledDate.value = ''
     startTime.value = ''
     duration.value = 0
-    completion.value = false
     notes.value = ''
 
     await loadWorkouts()
@@ -163,7 +183,6 @@ function editWorkout(workout) {
   scheduledDate.value = workout.Date
   startTime.value = workout.Start_Time
   duration.value = workout.Duration
-  completion.value = workout.Completion
   notes.value = workout.Notes || ''
 }
 
@@ -184,7 +203,6 @@ async function updateWorkout() {
       Date: scheduledDate.value,
       Start_Time: startTime.value,
       Duration: duration.value,
-      Completion: completion.value,
       Notes: notes.value,
     })
 
@@ -194,7 +212,6 @@ async function updateWorkout() {
     scheduledDate.value = ''
     startTime.value = ''
     duration.value = 0
-    completion.value = false
     notes.value = ''
 
     await loadWorkouts()
@@ -231,48 +248,28 @@ async function deleteWorkout(workoutId) {
 
 <template>
   <main class="workouts-page">
-
     <div class="workouts-container">
-
       <h1>Workouts</h1>
       <section class="workout-form-section">
-
         <h2>{{ editingWorkoutId ? 'Edit Workout' : 'Create a Workout' }}</h2>
 
         <form
           class="workout-form"
           @submit.prevent="editingWorkoutId ? updateWorkout() : addWorkout()"
         >
-
           <div class="form-field">
             <label for="workoutName">Workout Name:</label>
-            <input
-              id="workoutName"
-              v-model="workoutName"
-              type="text"
-              required
-              maxlength="50"
-            />
+            <input id="workoutName" v-model="workoutName" type="text" required maxlength="50" />
           </div>
 
           <div class="form-field">
             <label for="scheduledDate">Date:</label>
-            <input
-              id="scheduledDate"
-              v-model="scheduledDate"
-              type="date"
-              required
-            />
+            <input id="scheduledDate" v-model="scheduledDate" type="date" required />
           </div>
 
           <div class="form-field">
             <label for="startTime">Start Time:</label>
-            <input
-              id="startTime"
-              v-model="startTime"
-              type="time"
-              required
-            />
+            <input id="startTime" v-model="startTime" type="time" required />
           </div>
 
           <div class="form-field">
@@ -289,20 +286,7 @@ async function deleteWorkout(workoutId) {
 
           <div class="form-field notes-field">
             <label for="notes">Notes:</label>
-            <textarea
-              id="notes"
-              v-model="notes"
-              maxlength="200"
-            ></textarea>
-          </div>
-
-          <div class="completion-field">
-            <input
-              id="completion"
-              v-model="completion"
-              type="checkbox"
-            />
-            <label for="completion">Completed</label>
+            <textarea id="notes" v-model="notes" maxlength="200"></textarea>
           </div>
 
           <div class="form-actions">
@@ -318,13 +302,9 @@ async function deleteWorkout(workoutId) {
               }}
             </button>
           </div>
-
         </form>
-
       </section>
-      <p v-if="isLoading" class="status-message">
-        Loading workouts...
-      </p>
+      <p v-if="isLoading" class="status-message">Loading workouts...</p>
 
       <p v-else-if="errorMessage" class="error-message">
         {{ errorMessage }}
@@ -333,72 +313,88 @@ async function deleteWorkout(workoutId) {
       <p v-else-if="workouts.length === 0" class="empty-message">
         No workouts yet. Create your first workout above.
       </p>
-      <section v-else class="workout-list-section">
+      <template v-else>
+        <!-- Active Workouts -->
+        <section v-if="activeWorkouts.length > 0" class="workout-list-section">
+          <h2>Active Workouts</h2>
 
-        <h2>Your Workouts</h2>
+          <div class="workout-grid">
+            <div v-for="workout in activeWorkouts" :key="workout.Workout_ID" class="workout-card">
+              <div class="workout-card-header">
+                <h3>{{ workout.Workout_name }}</h3>
+                <span class="pending-badge">Planned</span>
+              </div>
 
-        <div class="workout-grid">
+              <div class="workout-card-details">
+                <p>Date: {{ workout.Date }}</p>
+                <p>Start Time: {{ workout.Start_Time }}</p>
+                <p>Duration: {{ workout.Duration }} minutes</p>
+                <p>Notes: {{ workout.Notes || 'No notes added.' }}</p>
+              </div>
 
-          <div
-            v-for="workout in workouts"
-            :key="workout.Workout_ID"
-            class="workout-card"
-          >
+              <div class="workout-card-actions">
+                <button
+                  type="button"
+                  class="details-button"
+                  @click="openWorkout(workout.Workout_ID)"
+                >
+                  View Workout Details
+                </button>
 
-            <div class="workout-card-header">
-              <h3>{{ workout.Workout_name }}</h3>
+                <button type="button" class="edit-button" @click="editWorkout(workout)">
+                  Edit
+                </button>
 
-              <span
-                :class="workout.Completion ? 'completed-badge' : 'pending-badge'"
-              >
-                {{ workout.Completion ? 'Completed' : 'Planned' }}
-              </span>
+                <button
+                  type="button"
+                  class="delete-button"
+                  :disabled="deletingWorkoutId === workout.Workout_ID"
+                  @click="deleteWorkout(workout.Workout_ID)"
+                >
+                  {{ deletingWorkoutId === workout.Workout_ID ? 'Deleting...' : 'Delete' }}
+                </button>
+              </div>
             </div>
-
-            <div class="workout-card-details">
-              <p>Date: {{ workout.Date }}</p>
-              <p>Start Time: {{ workout.Start_Time }}</p>
-              <p>Duration: {{ workout.Duration }} minutes</p>
-              <p>Notes: {{ workout.Notes || 'No notes added.' }}</p>
-            </div>
-
-            <div class="workout-card-actions">
-
-              <button
-                type="button"
-                class="details-button"
-                @click="openWorkout(workout.Workout_ID)"
-              >
-                View Workout Details
-              </button>
-
-              <button
-                type="button"
-                class="edit-button"
-                @click="editWorkout(workout)"
-              >
-                Edit
-              </button>
-
-              <button
-                type="button"
-                class="delete-button"
-                :disabled="deletingWorkoutId === workout.Workout_ID"
-                @click="deleteWorkout(workout.Workout_ID)"
-              >
-                {{ deletingWorkoutId === workout.Workout_ID ? 'Deleting...' : 'Delete' }}
-              </button>
-
-            </div>
-
           </div>
+        </section>
 
-        </div>
+        <!-- Completed Workout History -->
+        <section v-if="completedWorkouts.length > 0" class="workout-list-section">
+          <h2>Workout History</h2>
 
-      </section>
+          <div class="workout-grid">
+            <div
+              v-for="workout in completedWorkouts"
+              :key="workout.Workout_ID"
+              class="workout-card"
+            >
+              <div class="workout-card-header">
+                <h3>{{ workout.Workout_name }}</h3>
+                <span class="completed-badge">Completed</span>
+              </div>
 
+              <div class="workout-card-details">
+                <p>Date: {{ workout.Date }}</p>
+                <p>Start Time: {{ workout.Start_Time }}</p>
+                <p>Duration: {{ workout.Duration }} minutes</p>
+                <p>Completed: {{ formatCompletedAt(workout.Completed_At) }}</p>
+                <p>Notes: {{ workout.Notes || 'No notes added.' }}</p>
+              </div>
+
+              <div class="workout-card-actions">
+                <button
+                  type="button"
+                  class="details-button"
+                  @click="openWorkout(workout.Workout_ID)"
+                >
+                  View Workout Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </template>
     </div>
-
   </main>
 </template>
 
