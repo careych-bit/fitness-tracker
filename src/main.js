@@ -6,6 +6,7 @@ import { useAuthStore } from './stores/authStore'
 import TitlePage from './TitlePage.vue'
 
 import { createVuetify } from 'vuetify'
+import "vuetify/styles"
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
