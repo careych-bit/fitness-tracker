@@ -5,7 +5,6 @@ import { storeToRefs } from "pinia"
 import { ref, onMounted } from 'vue'
 import { db } from "@/firebase"
 
-import Chart from "chart.js/auto"
 
 import {
   addDoc,
@@ -23,6 +22,7 @@ const authStore = useAuthStore();
 const { user: currentUser, ready: authReady } = storeToRefs(authStore)
 
 const errorMessage = ref('')
+const dataset = ref([])
 
 // const props = defineProps([selectedGoal]);
 // console.log("goal " + selectedGoal)
@@ -39,51 +39,72 @@ async function loadWorkouts() {
             return
         }
 
-        // create and return dataset for graphs
-        const dataset = ref([])
-
+        // add to dataset for graphs
+        dataset.value = []
         workoutSnap.forEach((doc) => {
             const workoutData = doc.data()
-            dataset.push({
+            dataset.value.push({
                 date: workoutData.Date,
-                duration: workoutData.Duration
+                duration: workoutData.Duration,
             })
+            console.log(workoutData.Workout_name)
         })
 
-        return dataset
         
     }
     catch(error){
         console.error(error)
-        errorMessage.value = 'No workouts exist'
+        errorMessage.value = 'Unable to load workouts. Please try again.'
     }
 }
 
-async function createDataset (workoutSnap) {
-    const dataset = ref([])
-
-    workoutSnap.forEach((doc) => {
-        const workoutData = doc.data()
-        dataset.push({
-            date: workoutData.Date,
-            duration: workoutData.Duration
-        })
-    })
-
-    return dataset
-}
 
 onMounted( () => {
-    const workoutSnap = loadWorkouts()
-    const dataset = createDataset(workoutSnap)
-    console.log("onMounted: " + typeof(workoutSnap))
+    loadWorkouts()
     console.log("dataset" + dataset)
 })
+
+// create bar chart, x axis time (week, month, start-target of goals)
+// y axis minutes spent working out (completion == TRUE)
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js'
+import { Line } from 'vue-chartjs'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+)
+
+const linedata = {
+    datasets: [{
+        label: "Minutes worked out over time",
+        data: dataset
+    }],
+}
+
+
+
+// create pie chart workouts/target number of workouts from a specific goal
+// color by completion == True, False, and no workouts 
 
 </script>
 
 <template>
 
     <span>Graphs will appear here</span>
+    <Line :data="linedata">Cannot Load Chart</Line>
     
 </template>
