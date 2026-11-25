@@ -5,7 +5,6 @@ import { computed, ref, watch } from 'vue'
 import {
   addDoc,
   collection,
-  
   deleteDoc,
   doc,
   getDocs,
@@ -69,7 +68,6 @@ watch(
 )
 
 async function loadWorkouts() {
-
   if (!currentUser.value) {
     return
   }
@@ -189,7 +187,6 @@ function editWorkout(workout) {
 }
 
 async function updateWorkout() {
-
   if (!validateWorkout()) {
     return
   }
