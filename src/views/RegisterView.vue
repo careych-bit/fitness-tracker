@@ -84,31 +84,59 @@ async function register() {
     isLoading.value = false
   }
 }
+
+// source: https://stackoverflow.com/questions/63281566/best-way-for-center-v-card-horizontally-and-vertically-with-vuetify
+
 </script>
 
 <template>
-  <div>
-    <h1>Register</h1>
+  <v-container class="h-screen d-flex justify-center align-center flex-column bg-red">
+    <v-card id="regcard">
+      <v-card-title class="d-flex justify-center">Register</v-card-title>
+    
+        <v-card-actions class="d-flex justify-start flex-column">
+          <v-text-field v-model="email" type="email" placeholder="Email" min-width="25"/>
 
-    <input v-model="email" type="email" placeholder="Email" />
+          <v-text-field v-model="password" type="password" placeholder="Password" />
 
-    <input v-model="password" type="password" placeholder="Password" />
+          <v-text-field v-model="confirmPassword" type="password" placeholder="Confirm Password" />
 
-    <input v-model="confirmPassword" type="password" placeholder="Confirm Password" />
+          <v-btn type="button" :disabled="isLoading" @click="register">
+            {{ isLoading ? 'Creating account...' : 'Register' }}
+          </v-btn>
 
-    <button type="button" :disabled="isLoading" @click="register">
-      {{ isLoading ? 'Creating account...' : 'Register' }}
-    </button>
+          <p v-if="errorMessage">
+            {{ errorMessage }}
+          </p>
 
-    <p v-if="errorMessage">
-      {{ errorMessage }}
-    </p>
+          <p v-if="successMessage">
+            {{ successMessage }}
+          </p>
+        </v-card-actions>
 
-    <p v-if="successMessage">
-      {{ successMessage }}
-    </p>
+        <v-card-text>
+          <span>After registering, please check your email for a verification link before logging in.</span>
+          <br>
+          <span>Already have an account? <router-link to="/login">Login here</router-link>.</span>
+        </v-card-text>
 
-    <p>After registering, please check your email for a verification link before logging in.</p>
-    <p>Already have an account? <router-link to="/login">Login here</router-link>.</p>
-  </div>
+      </v-card>
+    </v-container>
+   
 </template>
+
+<style scoped>
+
+div.card-div {
+  /* display: flex;
+  flex-direction: column;   */
+  width: 100%;
+  height: 100vh;
+}
+
+#regcard {
+  background: lightblue;
+  color: black;
+}
+
+</style>
