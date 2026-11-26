@@ -7,14 +7,11 @@ import { db } from "@/firebase"
 
 
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   getDocs,
   getDoc,
   query,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 
@@ -22,12 +19,21 @@ const authStore = useAuthStore();
 const { user: currentUser, ready: authReady } = storeToRefs(authStore)
 
 const errorMessage = ref('')
-const dataset = ref([])
+const isLoading = ref(false)
+const workoutFullData = ref([])
+
 
 // const props = defineProps([selectedGoal]);
 // console.log("goal " + selectedGoal)
 
 async function loadWorkouts() {
+    if (!currentUser.value) {
+        return
+    }
+
+    isLoading.value = true
+    errorMessage.value = ''
+
     try{
         const workoutsQ = query(collection(db, 'workouts'), where('User_ID', '==', currentUser.value.uid))
         const workoutSnap = await getDocs(workoutsQ)
@@ -39,15 +45,20 @@ async function loadWorkouts() {
             return
         }
 
-        // add to dataset for graphs
-        dataset.value = []
         workoutSnap.forEach((doc) => {
             const workoutData = doc.data()
-            dataset.value.push({
-                date: workoutData.Date,
-                duration: workoutData.Duration,
+            workoutFullData.value.push({
+                Workout_ID: doc.id,
+                User_ID: workoutData.User_ID,
+                Name: workoutData.Workout_name,
+                Date: workoutData.Date,
+                Duration: workoutData.Duration,
+                Start_time: workoutData.Start_time,
+                Completion: workoutData.Completion,
+                Completed_At: workoutData.Completed_At || null,
+                Notes: workoutData.Notes,
+
             })
-            console.log(workoutData.Workout_name)
         })
 
         
@@ -56,12 +67,20 @@ async function loadWorkouts() {
         console.error(error)
         errorMessage.value = 'Unable to load workouts. Please try again.'
     }
+    finally {
+        isLoading.value = false
+    }
 }
 
 
 onMounted( () => {
     loadWorkouts()
-    console.log("dataset" + dataset)
+    // console.log("workoutFullData.value " + workoutFullData.value)
+    console.log(typeof workoutFullData, workoutFullData)
+    // console.log("Object.valu(obj): ", Object.values(workoutFullData)[3])
+
+    const linedata = getLineData(workoutFullData)
+    console.log("Mounted linedata: ", typeof linedata, linedata)
 })
 
 // create bar chart, x axis time (week, month, start-target of goals)
@@ -88,11 +107,34 @@ ChartJS.register(
   Legend
 )
 
-const linedata = {
-    datasets: [{
-        label: "Minutes worked out over time",
-        data: dataset
-    }],
+
+async function getLineData (data) {
+    const linedata = await Promise.resolve([])
+    
+
+    // workoutFullData.value.forEach((work) => {
+    //     console.log(work)
+    // })
+
+    // for (const k in workoutFullData) {
+    //     console.log("workoutFullData[k]: " +  workoutFullData[k])
+    //     // linedata.push({
+    //     //     date: Object.values(workoutFullData)[k].Date,
+    //     //     duration: Object.values(workoutFullData)[k].Duration
+    //     // })
+    //     console.log("date: " + workoutFullData[k].Date + " duration: " +  workoutFullData[k].Duration )
+    // }
+    try {
+    console.log("in linedata, data: ", data.value)
+    for(let i in data.value) {
+        console.log(i)
+    }
+
+    return linedata
+    }
+    finally {
+        console.log("done")
+    }
 }
 
 
@@ -105,6 +147,6 @@ const linedata = {
 <template>
 
     <span>Graphs will appear here</span>
-    <Line :data="linedata">Cannot Load Chart</Line>
+   <!--- <Line :data="linedata">Cannot Load Chart</Line> -->
     
 </template>
