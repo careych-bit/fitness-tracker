@@ -35,6 +35,7 @@ const sortedData = computed(() => {
     }
 
     const linedata = [];
+    const xAxis = [];
     for (const d of props.data) {
         linedata.push(
             {
@@ -42,26 +43,35 @@ const sortedData = computed(() => {
                 duration: d.Duration
             }
         )
-        // console.log("d.date: ", d.date, " d.duration: ", d.duration)
+
+        xAxis.push(d.Date)
+        // console.log("d.Date: ", d.Date, " d.Duration: ", d.Duration)
+        // console.log("d: ", Object.values(d))
     }
+    console.log("xAxis: ", xAxis)
     // console.log("linedata: ", typeof linedata, linedata)
+
 
     const chartConfig = {
         data: {
         datasets: [{
             label: "Workout Duration Over Time",
             data: linedata
-        }]
+        }],
+        labels: [],
         },
         options: {
             parsing: {
                 xAxisKey: "date",
                 yAxisKey: "duration"
-            }
+            },
+            responsive: true,
+            maintainAspectRatio: true
         }
     
     }
 
+    console.log("Chart: ", chartConfig)
     return chartConfig
 })
 
@@ -70,9 +80,18 @@ const sortedData = computed(() => {
 
 <template>
     <main>
-        <p>Line Graph Page</p>
-        <div>
-            <Line :data="sortedData.data" :options="sortedData.options">Cannot load chart</Line>
+        <div class="linegraph-div">
+            <Line id="linegraph" :data="sortedData.data" :options="sortedData.options">Cannot load chart</Line>
         </div>
     </main>
 </template>
+
+<style scoped>
+
+/* .linegraph-div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+} */
+
+</style>
